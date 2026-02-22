@@ -1,0 +1,393 @@
+import SwiftUI
+
+struct MainDashboardView: View {
+    @State var viewModel: GameViewModel
+
+    private let dateFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "EEE d MMM yyyy"
+        return f
+    }()
+
+    var body: some View {
+        ZStack {
+            Color(red: 0.06, green: 0.08, blue: 0.1).ignoresSafeArea()
+
+            VStack(spacing: 0) {
+                topBar
+                HStack(spacing: 12) {
+                    leftColumn
+                    centerColumn
+                    rightColumn
+                }
+                .padding(12)
+                bottomBar
+            }
+        }
+    }
+
+    private var topBar: some View {
+        HStack {
+            if let club = viewModel.selectedClub {
+                HStack(spacing: 8) {
+                    ZStack {
+                        Circle()
+                            .fill(Color.green.opacity(0.2))
+                            .frame(width: 32, height: 32)
+                        Text(club.shortName)
+                            .font(.system(size: 9, weight: .black))
+                            .foregroundStyle(.green)
+                    }
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(club.name)
+                            .font(.subheadline)
+                            .fontWeight(.bold)
+                            .foregroundStyle(.white)
+                        Text(viewModel.leagueName(for: club))
+                            .font(.caption2)
+                            .foregroundStyle(.white.opacity(0.5))
+                    }
+                }
+            }
+
+            Spacer()
+
+            Text(dateFormatter.string(from: viewModel.currentDate))
+                .font(.subheadline)
+                .fontWeight(.medium)
+                .foregroundStyle(.white.opacity(0.7))
+
+            Spacer()
+
+            HStack(spacing: 12) {
+                if let club = viewModel.selectedClub {
+                    Label(viewModel.formatCurrency(club.budget), systemImage: "banknote")
+                        .font(.caption)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(.green)
+                }
+
+                HStack(spacing: 4) {
+                    Image(systemName: "star.fill")
+                        .font(.caption2)
+                        .foregroundStyle(.yellow)
+                    Text("\(viewModel.selectedClub?.rating ?? 0)")
+                        .font(.caption)
+                        .fontWeight(.bold)
+                        .foregroundStyle(.yellow)
+                }
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
+        .background(Color(white: 0.1))
+    }
+
+    private var leftColumn: some View {
+        VStack(spacing: 10) {
+            nextMatchCard
+            upcomingFixturesCard
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    private var centerColumn: some View {
+        VStack(spacing: 10) {
+            teamInfoCard
+            transfersCard
+            competitionsCard
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    private var rightColumn: some View {
+        VStack(spacing: 10) {
+            managerCard
+            quickActionsGrid
+            newsCard
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    private var nextMatchCard: some View {
+        DashboardCard(title: "NEXT MATCH", icon: "sportscourt.fill", accentColor: .green) {
+            if let match = viewModel.nextMatch {
+                VStack(spacing: 8) {
+                    Text(match.matchType.rawValue)
+                        .font(.caption2)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(.green)
+                        .textCase(.uppercase)
+
+                    HStack(spacing: 12) {
+                        VStack(spacing: 4) {
+                            clubBadge(match.homeClubName)
+                            Text(match.homeClubName)
+                                .font(.caption2)
+                                .fontWeight(.medium)
+                                .lineLimit(1)
+                        }
+                        .frame(maxWidth: .infinity)
+
+                        Text("vs")
+                            .font(.caption)
+                            .fontWeight(.bold)
+                            .foregroundStyle(.white.opacity(0.4))
+
+                        VStack(spacing: 4) {
+                            clubBadge(match.awayClubName)
+                            Text(match.awayClubName)
+                                .font(.caption2)
+                                .fontWeight(.medium)
+                                .lineLimit(1)
+                        }
+                        .frame(maxWidth: .infinity)
+                    }
+
+                    Button {
+                        viewModel.playMatch(match)
+                    } label: {
+                        Text("Play Match")
+                            .font(.caption)
+                            .fontWeight(.bold)
+                            .foregroundStyle(.black)
+                            .padding(.horizontal, 24)
+                            .padding(.vertical, 6)
+                            .background(Color.green)
+                            .clipShape(.capsule)
+                    }
+                }
+            } else {
+                Text("No upcoming matches")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    private var upcomingFixturesCard: some View {
+        DashboardCard(title: "UPCOMING", icon: "calendar", accentColor: .blue) {
+            VStack(spacing: 4) {
+                ForEach(Array(viewModel.upcomingFixtures.prefix(3))) { match in
+                    HStack {
+                        Text(match.matchType.rawValue)
+                            .font(.system(size: 9))
+                            .foregroundStyle(.blue)
+                            .frame(width: 40, alignment: .leading)
+                        Text("\(match.homeClubName) vs \(match.awayClubName)")
+                            .font(.system(size: 9))
+                            .foregroundStyle(.white.opacity(0.7))
+                            .lineLimit(1)
+                        Spacer()
+                    }
+                    .padding(.vertical, 2)
+                }
+            }
+        }
+    }
+
+    private var teamInfoCard: some View {
+        DashboardCard(title: "TEAM", icon: "person.3.fill", accentColor: .cyan) {
+            if let club = viewModel.selectedClub {
+                VStack(spacing: 4) {
+                    infoRow("Squad Size", "\(viewModel.myPlayers.count)")
+                    infoRow("Formation", club.formation)
+                    infoRow("Rating", "\(club.rating)")
+                    infoRow("Stadium", club.stadiumName)
+                }
+            }
+        }
+    }
+
+    private var transfersCard: some View {
+        Button {
+            viewModel.currentScreen = .transfers
+        } label: {
+            DashboardCard(title: "TRANSFERS", icon: "arrow.left.arrow.right", accentColor: .orange) {
+                VStack(spacing: 4) {
+                    if let club = viewModel.selectedClub {
+                        infoRow("Funds", viewModel.formatCurrency(club.budget))
+                        infoRow("Window", viewModel.transferWindow.label)
+                    }
+                }
+            }
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var competitionsCard: some View {
+        Button {
+            viewModel.currentScreen = .standings
+        } label: {
+            DashboardCard(title: "STANDINGS", icon: "trophy.fill", accentColor: .yellow) {
+                VStack(spacing: 2) {
+                    ForEach(Array(viewModel.currentLeagueStandings.prefix(5).enumerated()), id: \.element.id) { idx, entry in
+                        HStack {
+                            Text("\(idx + 1).")
+                                .font(.system(size: 9, weight: .bold, design: .monospaced))
+                                .frame(width: 16, alignment: .trailing)
+                            Text(entry.clubName)
+                                .font(.system(size: 9))
+                                .lineLimit(1)
+                                .foregroundStyle(entry.clubId == viewModel.selectedClubId ? .green : .white.opacity(0.7))
+                            Spacer()
+                            Text("\(entry.points) pts")
+                                .font(.system(size: 9, weight: .semibold, design: .monospaced))
+                                .foregroundStyle(.white.opacity(0.5))
+                        }
+                    }
+                }
+            }
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var managerCard: some View {
+        DashboardCard(title: "MANAGER", icon: "person.fill", accentColor: .purple) {
+            VStack(spacing: 4) {
+                infoRow("League Titles", "\(viewModel.managerLeagueTitles)")
+                infoRow("Cup Wins", "\(viewModel.managerCupWins)")
+                infoRow("Season", "\(viewModel.seasonYear)/\(viewModel.seasonYear + 1)")
+            }
+        }
+    }
+
+    private var quickActionsGrid: some View {
+        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
+            quickActionButton("Squad", icon: "person.3.fill", color: .cyan) {
+                viewModel.currentScreen = .squad
+            }
+            quickActionButton("Tactics", icon: "arrow.triangle.branch", color: .orange) {
+                viewModel.currentScreen = .tactics
+            }
+            quickActionButton("Academy", icon: "graduationcap.fill", color: .purple) {
+                viewModel.currentScreen = .youthAcademy
+            }
+            quickActionButton("Calendar", icon: "calendar", color: .blue) {
+                viewModel.currentScreen = .calendar
+            }
+        }
+    }
+
+    private var newsCard: some View {
+        DashboardCard(title: "NEWS", icon: "newspaper.fill", accentColor: .green) {
+            VStack(alignment: .leading, spacing: 3) {
+                ForEach(Array(viewModel.newsMessages.prefix(3).enumerated()), id: \.offset) { _, msg in
+                    Text(msg)
+                        .font(.system(size: 9))
+                        .foregroundStyle(.white.opacity(0.6))
+                        .lineLimit(2)
+                }
+            }
+        }
+    }
+
+    private var bottomBar: some View {
+        HStack {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 12) {
+                    ForEach(Array(viewModel.newsMessages.prefix(5).enumerated()), id: \.offset) { _, msg in
+                        Text(msg)
+                            .font(.caption2)
+                            .foregroundStyle(.white.opacity(0.5))
+                    }
+                }
+                .padding(.horizontal, 16)
+            }
+
+            Spacer()
+
+            Button {
+                viewModel.advanceWeek()
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "forward.fill")
+                        .font(.caption2)
+                    Text("Continue")
+                        .font(.caption)
+                        .fontWeight(.bold)
+                }
+                .foregroundStyle(.black)
+                .padding(.horizontal, 20)
+                .padding(.vertical, 8)
+                .background(Color.green)
+                .clipShape(.capsule)
+            }
+            .padding(.trailing, 12)
+        }
+        .padding(.vertical, 6)
+        .background(Color(white: 0.08))
+    }
+
+    private func clubBadge(_ name: String) -> some View {
+        ZStack {
+            Circle()
+                .fill(Color.white.opacity(0.1))
+                .frame(width: 28, height: 28)
+            Text(String(name.prefix(2)).uppercased())
+                .font(.system(size: 9, weight: .black))
+                .foregroundStyle(.white)
+        }
+    }
+
+    private func infoRow(_ label: String, _ value: String) -> some View {
+        HStack {
+            Text(label)
+                .font(.system(size: 10))
+                .foregroundStyle(.white.opacity(0.5))
+            Spacer()
+            Text(value)
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(.white)
+        }
+    }
+
+    private func quickActionButton(_ title: String, icon: String, color: Color, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            VStack(spacing: 4) {
+                Image(systemName: icon)
+                    .font(.system(size: 16))
+                    .foregroundStyle(color)
+                Text(title)
+                    .font(.system(size: 9, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.7))
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 10)
+            .background(color.opacity(0.1))
+            .clipShape(.rect(cornerRadius: 10))
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+struct DashboardCard<Content: View>: View {
+    let title: String
+    let icon: String
+    let accentColor: Color
+    @ViewBuilder let content: () -> Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 6) {
+                Image(systemName: icon)
+                    .font(.system(size: 10))
+                    .foregroundStyle(accentColor)
+                Text(title)
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundStyle(accentColor)
+                    .tracking(1)
+            }
+
+            content()
+        }
+        .padding(10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.white.opacity(0.05))
+        .clipShape(.rect(cornerRadius: 12))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(accentColor.opacity(0.15), lineWidth: 1)
+        )
+    }
+}
