@@ -15,12 +15,64 @@ struct MainDashboardView: View {
 
             VStack(spacing: 0) {
                 topBar
-                HStack(spacing: 12) {
-                    leftColumn
-                    centerColumn
-                    rightColumn
+                GeometryReader { geo in
+                    let spacing: CGFloat = 10
+                    let totalWidth = geo.size.width - 24 // horizontal padding
+                    let rightColWidth = (totalWidth - spacing * 2) / 3
+                    let leftDoubleWidth = totalWidth - rightColWidth - spacing
+                    let leftSingleWidth = (leftDoubleWidth - spacing) / 2
+
+                    ScrollView(.vertical, showsIndicators: false) {
+                        VStack(spacing: spacing) {
+                            // Row 1: NEXT MATCH (2 cols) | MANAGER (1 col)
+                            HStack(spacing: spacing) {
+                                nextMatchCard
+                                    .frame(width: leftDoubleWidth)
+                                managerCard
+                                    .frame(width: rightColWidth)
+                            }
+
+                            // Row 2: TEAM | TRANSFERS | Buttons (Squad + Tactics)
+                            HStack(spacing: spacing) {
+                                teamInfoCard
+                                    .frame(width: leftSingleWidth)
+                                transfersCard
+                                    .frame(width: leftSingleWidth)
+                                VStack(spacing: spacing) {
+                                    quickActionButton("Squad", icon: "person.3.fill", color: .cyan) {
+                                        viewModel.currentScreen = .squad
+                                    }
+                                    quickActionButton("Tactics", icon: "arrow.triangle.branch", color: .orange) {
+                                        viewModel.currentScreen = .tactics
+                                    }
+                                }
+                                .frame(width: rightColWidth)
+                            }
+
+                            // Row 3: UPCOMING (2 cols) | STANDINGS + Buttons + NEWS
+                            HStack(alignment: .top, spacing: spacing) {
+                                upcomingFixturesCard
+                                    .frame(width: leftDoubleWidth)
+
+                                VStack(spacing: spacing) {
+                                    competitionsCard
+                                    HStack(spacing: spacing) {
+                                        quickActionButton("Academy", icon: "graduationcap.fill", color: .purple) {
+                                            viewModel.currentScreen = .youthAcademy
+                                        }
+                                        quickActionButton("Calendar", icon: "calendar", color: .blue) {
+                                            viewModel.currentScreen = .calendar
+                                        }
+                                    }
+                                    newsCard
+                                }
+                                .frame(width: rightColWidth)
+                            }
+                        }
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                    }
                 }
-                .padding(12)
                 bottomBar
             }
         }
@@ -83,31 +135,7 @@ struct MainDashboardView: View {
         .background(Color(white: 0.1))
     }
 
-    private var leftColumn: some View {
-        VStack(spacing: 10) {
-            nextMatchCard
-            upcomingFixturesCard
-        }
-        .frame(maxWidth: .infinity)
-    }
 
-    private var centerColumn: some View {
-        VStack(spacing: 10) {
-            teamInfoCard
-            transfersCard
-            competitionsCard
-        }
-        .frame(maxWidth: .infinity)
-    }
-
-    private var rightColumn: some View {
-        VStack(spacing: 10) {
-            managerCard
-            quickActionsGrid
-            newsCard
-        }
-        .frame(maxWidth: .infinity)
-    }
 
     private var nextMatchCard: some View {
         DashboardCard(title: "NEXT MATCH", icon: "sportscourt.fill", accentColor: .green) {
@@ -252,22 +280,7 @@ struct MainDashboardView: View {
         }
     }
 
-    private var quickActionsGrid: some View {
-        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
-            quickActionButton("Squad", icon: "person.3.fill", color: .cyan) {
-                viewModel.currentScreen = .squad
-            }
-            quickActionButton("Tactics", icon: "arrow.triangle.branch", color: .orange) {
-                viewModel.currentScreen = .tactics
-            }
-            quickActionButton("Academy", icon: "graduationcap.fill", color: .purple) {
-                viewModel.currentScreen = .youthAcademy
-            }
-            quickActionButton("Calendar", icon: "calendar", color: .blue) {
-                viewModel.currentScreen = .calendar
-            }
-        }
-    }
+
 
     private var newsCard: some View {
         DashboardCard(title: "NEWS", icon: "newspaper.fill", accentColor: .green) {
