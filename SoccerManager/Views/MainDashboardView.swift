@@ -19,7 +19,6 @@ struct MainDashboardView: View {
             }
             .padding(12)
             .frame(maxHeight: .infinity)
-            bottomBar
         }
         .background(Color(red: 0.06, green: 0.08, blue: 0.1), ignoresSafeAreaEdges: .all)
     }
@@ -279,16 +278,47 @@ struct MainDashboardView: View {
     }
 
     private var newsCard: some View {
-        DashboardCard(title: "NEWS", icon: "newspaper.fill", accentColor: .green, expandVertically: true) {
-            VStack(alignment: .leading, spacing: 3) {
-                ForEach(Array(viewModel.newsMessages.prefix(3).enumerated()), id: \.offset) { _, msg in
-                    Text(msg)
-                        .font(.system(size: 9))
-                        .foregroundStyle(.white.opacity(0.6))
-                        .lineLimit(2)
+        VStack {
+            Spacer()
+            if viewModel.isMatchDay {
+                Button {
+                    if let match = viewModel.todayMatch {
+                        viewModel.playMatch(match)
+                    }
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "sportscourt.fill")
+                            .font(.caption2)
+                        Text("Play Match")
+                            .font(.system(size: 13, weight: .bold))
+                    }
+                    .foregroundStyle(.black)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(Color.orange)
+                    .clipShape(.rect(cornerRadius: 12))
                 }
+                .buttonStyle(.plain)
+            } else {
+                Button {
+                    viewModel.advanceDay()
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "forward.fill")
+                            .font(.caption2)
+                        Text("Next Day")
+                            .font(.system(size: 13, weight: .bold))
+                    }
+                    .foregroundStyle(.black)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(Color.green)
+                    .clipShape(.rect(cornerRadius: 12))
+                }
+                .buttonStyle(.plain)
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     private var bottomBar: some View {

@@ -75,8 +75,7 @@ struct StandingsView: View {
             Spacer()
 
             Text("STANDINGS")
-                .font(.headline)
-                .fontWeight(.black)
+                .font(.system(size: 13, weight: .black))
                 .foregroundStyle(.white)
                 .tracking(2)
 
