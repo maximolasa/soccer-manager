@@ -10,21 +10,18 @@ struct MainDashboardView: View {
     }()
 
     var body: some View {
-        ZStack {
-            Color(red: 0.06, green: 0.08, blue: 0.1).ignoresSafeArea()
-
-            VStack(spacing: 0) {
-                topBar
-                HStack(spacing: 12) {
-                    leftColumn
-                    centerColumn
-                    rightColumn
-                }
-                .padding(12)
-                .frame(maxHeight: .infinity)
-                bottomBar
+        VStack(spacing: 0) {
+            topBar
+            HStack(spacing: 12) {
+                leftColumn
+                centerColumn
+                rightColumn
             }
+            .padding(12)
+            .frame(maxHeight: .infinity)
+            bottomBar
         }
+        .background(Color(red: 0.06, green: 0.08, blue: 0.1).ignoresSafeArea())
     }
 
     private var topBar: some View {
@@ -175,7 +172,7 @@ struct MainDashboardView: View {
     private var upcomingFixturesCard: some View {
         DashboardCard(title: "UPCOMING", icon: "calendar", accentColor: .blue, expandVertically: true) {
             VStack(spacing: 4) {
-                ForEach(Array(viewModel.upcomingFixtures.prefix(3))) { match in
+                ForEach(Array(viewModel.upcomingFixtures.prefix(6))) { match in
                     HStack {
                         Text(matchDateString(match.date))
                             .font(.system(size: 8))
