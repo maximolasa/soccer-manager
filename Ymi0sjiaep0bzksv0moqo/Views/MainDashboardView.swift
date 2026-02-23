@@ -144,17 +144,23 @@ struct MainDashboardView: View {
                         .frame(maxWidth: .infinity)
                     }
 
-                    Button {
-                        viewModel.playMatch(match)
-                    } label: {
-                        Text("Play Match")
-                            .font(.caption)
-                            .fontWeight(.bold)
-                            .foregroundStyle(.black)
-                            .padding(.horizontal, 24)
-                            .padding(.vertical, 6)
-                            .background(Color.green)
-                            .clipShape(.capsule)
+                    if viewModel.isMatchDay && viewModel.todayMatch?.id == match.id {
+                        Button {
+                            viewModel.playMatch(match)
+                        } label: {
+                            Text("Play Match")
+                                .font(.caption)
+                                .fontWeight(.bold)
+                                .foregroundStyle(.black)
+                                .padding(.horizontal, 24)
+                                .padding(.vertical, 6)
+                                .background(Color.green)
+                                .clipShape(.capsule)
+                        }
+                    } else {
+                        Text(matchDateString(match.date))
+                            .font(.caption2)
+                            .foregroundStyle(.white.opacity(0.4))
                     }
                 }
             } else {
@@ -297,23 +303,45 @@ struct MainDashboardView: View {
 
             Spacer()
 
-            Button {
-                viewModel.advanceWeek()
-            } label: {
-                HStack(spacing: 6) {
-                    Image(systemName: "forward.fill")
-                        .font(.caption2)
-                    Text("Continue")
-                        .font(.caption)
-                        .fontWeight(.bold)
+            if viewModel.isMatchDay {
+                Button {
+                    if let match = viewModel.todayMatch {
+                        viewModel.playMatch(match)
+                    }
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "sportscourt.fill")
+                            .font(.caption2)
+                        Text("Play Match")
+                            .font(.caption)
+                            .fontWeight(.bold)
+                    }
+                    .foregroundStyle(.black)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 8)
+                    .background(Color.orange)
+                    .clipShape(.capsule)
                 }
-                .foregroundStyle(.black)
-                .padding(.horizontal, 20)
-                .padding(.vertical, 8)
-                .background(Color.green)
-                .clipShape(.capsule)
+                .padding(.trailing, 12)
+            } else {
+                Button {
+                    viewModel.advanceDay()
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "forward.fill")
+                            .font(.caption2)
+                        Text("Next Day")
+                            .font(.caption)
+                            .fontWeight(.bold)
+                    }
+                    .foregroundStyle(.black)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 8)
+                    .background(Color.green)
+                    .clipShape(.capsule)
+                }
+                .padding(.trailing, 12)
             }
-            .padding(.trailing, 12)
         }
         .padding(.vertical, 6)
         .background(Color(white: 0.08))
@@ -340,6 +368,12 @@ struct MainDashboardView: View {
                 .font(.system(size: 10, weight: .semibold))
                 .foregroundStyle(.white)
         }
+    }
+
+    private func matchDateString(_ date: Date) -> String {
+        let f = DateFormatter()
+        f.dateFormat = "EEE d MMM"
+        return f.string(from: date)
     }
 
     private func quickActionButton(_ title: String, icon: String, color: Color, action: @escaping () -> Void) -> some View {

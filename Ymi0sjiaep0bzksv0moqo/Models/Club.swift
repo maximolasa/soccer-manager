@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 
 nonisolated enum AcademyUpgrade: String, CaseIterable, Sendable {
     case recruiting
@@ -30,6 +31,32 @@ class Club: Identifiable {
     var playersPerYear: Int { 1 + academyRecruitingLevel }
     var academyBaseQuality: Int { 30 + (academyQualityLevel * 8) }
     var trainingBoost: Double { 1.0 + Double(academyTrainingLevel) * 0.15 }
+
+    var primarySwiftUIColor: Color {
+        Club.colorFromString(primaryColor)
+    }
+
+    var secondarySwiftUIColor: Color {
+        Club.colorFromString(secondaryColor)
+    }
+
+    static func colorFromString(_ name: String) -> Color {
+        switch name.lowercased() {
+        case "red": return .red
+        case "blue": return .blue
+        case "green": return .green
+        case "yellow": return .yellow
+        case "orange": return .orange
+        case "purple": return .purple
+        case "white": return .white
+        case "black": return Color(white: 0.15)
+        case "navy": return Color(red: 0.0, green: 0.0, blue: 0.5)
+        case "skyblue": return Color(red: 0.53, green: 0.81, blue: 0.92)
+        case "claret", "maroon": return Color(red: 0.5, green: 0.0, blue: 0.13)
+        case "cyan": return .cyan
+        default: return .gray
+        }
+    }
 
     var totalWages: Int = 0
 

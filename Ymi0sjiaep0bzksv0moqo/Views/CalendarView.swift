@@ -64,9 +64,11 @@ struct CalendarView: View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 6) {
                 filterChip("All", isSelected: filterType == nil) { filterType = nil }
-                filterChip("League", isSelected: filterType == .league, color: .blue) { filterType = .league }
-                filterChip("Cup", isSelected: filterType == .nationalCup, color: .yellow) { filterType = .nationalCup }
-                filterChip("Friendly", isSelected: filterType == .friendly, color: .cyan) { filterType = .friendly }
+                ForEach(MatchType.allCases) { type in
+                    filterChip(type.rawValue, isSelected: filterType == type, color: matchTypeColor(type)) {
+                        filterType = type
+                    }
+                }
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 6)

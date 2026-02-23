@@ -181,9 +181,10 @@ struct MatchView: View {
                                 .foregroundStyle(.white.opacity(0.7))
                                 .lineLimit(1)
                             Spacer()
-                            Text(String(format: "%.1f", Double.random(in: 5.5...9.0)))
+                            let rating = match.playerRatings[player.id] ?? 6.0
+                            Text(String(format: "%.1f", rating))
                                 .font(.system(size: 9, weight: .bold, design: .monospaced))
-                                .foregroundStyle(.yellow)
+                                .foregroundStyle(ratingColor(rating))
                         }
                     }
                 }
@@ -200,9 +201,10 @@ struct MatchView: View {
                                 .foregroundStyle(.white.opacity(0.7))
                                 .lineLimit(1)
                             Spacer()
-                            Text(String(format: "%.1f", Double.random(in: 5.5...9.0)))
+                            let rating = match.playerRatings[player.id] ?? 6.0
+                            Text(String(format: "%.1f", rating))
                                 .font(.system(size: 9, weight: .bold, design: .monospaced))
-                                .foregroundStyle(.yellow)
+                                .foregroundStyle(ratingColor(rating))
                         }
                     }
                 }
@@ -210,6 +212,13 @@ struct MatchView: View {
             }
         }
         .padding(12)
+    }
+
+    private func ratingColor(_ rating: Double) -> Color {
+        if rating >= 8.0 { return .green }
+        if rating >= 6.5 { return .yellow }
+        if rating >= 5.0 { return .orange }
+        return .red
     }
 
     private var standingsSidePanel: some View {

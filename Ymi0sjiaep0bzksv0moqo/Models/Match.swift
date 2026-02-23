@@ -1,11 +1,13 @@
 import Foundation
 
-nonisolated enum MatchType: String, Sendable {
+nonisolated enum MatchType: String, CaseIterable, Identifiable, Sendable {
     case friendly = "Friendly"
     case league = "League"
     case nationalCup = "Cup"
     case championsLeague = "Champions League"
     case europaLeague = "Europa League"
+
+    var id: String { rawValue }
 }
 
 nonisolated enum MatchEventType: Sendable {
@@ -48,6 +50,7 @@ class Match: Identifiable {
     var homeShotsOnTarget: Int
     var awayShotsOnTarget: Int
     var leagueId: UUID?
+    var playerRatings: [UUID: Double] = [:]
 
     init(
         homeClubId: UUID,

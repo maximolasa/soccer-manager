@@ -23,7 +23,7 @@ struct GameDataGenerator {
         "De Jong", "Van Dijk", "De Ligt", "Bakker", "Visser", "Smit", "Meijer"
     ]
 
-    static func generatePlayer(clubId: UUID, position: PlayerPosition, quality: Int) -> Player {
+    static func generatePlayer(clubId: UUID?, position: PlayerPosition, quality: Int) -> Player {
         let firstName = firstNames.randomElement()!
         let lastName = lastNames.randomElement()!
         let age = Int.random(in: 17...35)

@@ -98,6 +98,23 @@ class GameViewModel {
         players.filter { $0.clubId == nil }
     }
 
+    /// The player's next unplayed match that falls on today's date
+    var todayMatch: Match? {
+        let cal = Calendar.current
+        let allFixtures = seasonFixtures + cupFixtures + friendlyFixtures
+        return allFixtures.first {
+            !$0.isPlayed
+            && ($0.homeClubId == selectedClubId || $0.awayClubId == selectedClubId)
+            && cal.isDate($0.date, inSameDayAs: currentDate)
+        }
+    }
+
+    /// True when there is an unplayed match on the current date
+    var isMatchDay: Bool { todayMatch != nil }
+
+    /// True when the player can press Continue (no unplayed match blocking)
+    var canAdvance: Bool { !isMatchDay }
+
     static func seasonStartDate() -> Date {
         var components = DateComponents()
         components.year = 2025
@@ -129,8 +146,7 @@ class GameViewModel {
         for _ in 0..<40 {
             let pos = PlayerPosition.allCases.randomElement()!
             let quality = Int.random(in: 30...70)
-            let player = GameDataGenerator.generatePlayer(clubId: UUID(), position: pos, quality: quality)
-            player.clubId = nil
+            let player = GameDataGenerator.generatePlayer(clubId: nil, position: pos, quality: quality)
             player.contractYearsLeft = 0
             players.append(player)
         }
@@ -239,8 +255,8 @@ class GameViewModel {
         let homeStrength = homeRating + Double.random(in: -15...15) + 3
         let awayStrength = awayRating + Double.random(in: -15...15)
 
-        let totalStrength = homeStrength + awayStrength
-        match.homePossession = Int(homeStrength / totalStrength * 100)
+        let totalStrength = max(homeStrength + awayStrength, 1.0)
+        match.homePossession = min(100, max(0, Int(homeStrength / totalStrength * 100)))
         match.awayPossession = 100 - match.homePossession
 
         let homeExpectedGoals = max(0, (homeStrength - 30) / 20)
@@ -304,6 +320,25 @@ class GameViewModel {
         match.events = events.sorted { $0.minute < $1.minute }
         match.isPlayed = true
 
+        // Generate persisted player ratings
+        var ratings: [UUID: Double] = [:]
+        for player in homePlayers.prefix(11) {
+            let baseRating = Double(player.stats.overall) / 15.0 + 3.0
+            ratings[player.id] = min(10.0, max(1.0, baseRating + Double.random(in: -1.5...1.5)))
+        }
+        for player in awayPlayers.prefix(11) {
+            let baseRating = Double(player.stats.overall) / 15.0 + 3.0
+            ratings[player.id] = min(10.0, max(1.0, baseRating + Double.random(in: -1.5...1.5)))
+        }
+        // Boost scorers' ratings
+        for event in match.events where event.type == .goal {
+            let scorerPool = event.isHome ? homePlayers : awayPlayers
+            if let scorer = scorerPool.first(where: { $0.fullName == event.playerName }) {
+                ratings[scorer.id] = min(10.0, (ratings[scorer.id] ?? 7.0) + 0.5)
+            }
+        }
+        match.playerRatings = ratings
+
         if match.matchType == .league, let leagueId = match.leagueId {
             updateStandings(leagueId: leagueId, match: match)
         }
@@ -341,31 +376,43 @@ class GameViewModel {
         standings[leagueId] = leagueStandings
     }
 
-    func advanceWeek() {
-        currentDate = Calendar.current.date(byAdding: .day, value: 7, to: currentDate)!
-        currentWeek += 1
+    private var dayCounter: Int = 0
 
+    func advanceDay() {
+        // Block if there's an unplayed match today
+        guard canAdvance else { return }
+
+        currentDate = Calendar.current.date(byAdding: .day, value: 1, to: currentDate)!
+        dayCounter += 1
+
+        // Simulate AI matches that happened on the new date (or earlier, if missed)
+        let cal = Calendar.current
         let allFixtures = seasonFixtures + cupFixtures + friendlyFixtures
-        let weekMatches = allFixtures.filter {
-            !$0.isPlayed && $0.date <= currentDate
+        let todayAIMatches = allFixtures.filter {
+            !$0.isPlayed
+            && $0.homeClubId != selectedClubId
+            && $0.awayClubId != selectedClubId
+            && cal.isDate($0.date, inSameDayAs: currentDate)
+        }
+        for match in todayAIMatches {
+            simulateMatch(match)
         }
 
-        for match in weekMatches {
-            let involvesPlayer = match.homeClubId == selectedClubId || match.awayClubId == selectedClubId
-            if !involvesPlayer {
-                simulateMatch(match)
-            }
+        // Weekly events (every 7 days)
+        if dayCounter % 7 == 0 {
+            currentWeek += 1
+            handleInjuries()
         }
 
-        if currentWeek % 4 == 0 {
+        // Training every ~28 days
+        if dayCounter % 28 == 0 {
             applyTraining()
         }
 
-        if currentWeek % 12 == 0 {
+        // Youth academy every ~84 days
+        if dayCounter % 84 == 0 {
             checkYouthAcademy()
         }
-
-        handleInjuries()
     }
 
     func playMatch(_ match: Match) {
@@ -381,7 +428,6 @@ class GameViewModel {
 
     func continueFromResult() {
         currentMatch = nil
-        advanceWeek()
         currentScreen = .dashboard
     }
 

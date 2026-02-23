@@ -141,6 +141,7 @@ struct TacticsView: View {
                 with: .color(lineColor), lineWidth: 1
             )
         }
+        .drawingGroup()
     }
 
     private func formationPositions(formation: String) -> [CGPoint] {

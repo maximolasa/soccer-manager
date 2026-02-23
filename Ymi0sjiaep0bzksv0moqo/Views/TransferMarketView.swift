@@ -339,9 +339,6 @@ struct TransferMarketView: View {
     }
 
     private func statColor(_ value: Int) -> Color {
-        if value >= 85 { return .green }
-        if value >= 70 { return .yellow }
-        if value >= 55 { return .orange }
-        return .red
+        ColorHelpers.statColor(value)
     }
 }
