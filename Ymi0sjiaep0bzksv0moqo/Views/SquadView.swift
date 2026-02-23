@@ -14,14 +14,15 @@ struct SquadView: View {
         case defensive = "DEF"
         case physical = "PHY"
         case age = "Age"
+        case goals = "Goals"
+        case wage = "Wage"
     }
 
     nonisolated enum SortDirection: Sendable {
-        case descending  // + to -  (high first)
-        case ascending   // - to +  (low first)
+        case descending
+        case ascending
     }
 
-    /// Fixed position order: GK, CB, LB, RB, CDM, CM, CAM, LW, RW, ST
     static let positionOrder: [PlayerPosition] = [
         .goalkeeper, .centerBack, .leftBack, .rightBack,
         .defensiveMidfield, .centralMidfield, .attackingMidfield,
@@ -53,6 +54,10 @@ struct SquadView: View {
             list.sort { asc ? $0.stats.physical < $1.stats.physical : $0.stats.physical > $1.stats.physical }
         case .age:
             list.sort { asc ? $0.age > $1.age : $0.age < $1.age }
+        case .goals:
+            list.sort { asc ? $0.goals < $1.goals : $0.goals > $1.goals }
+        case .wage:
+            list.sort { asc ? $0.wage < $1.wage : $0.wage > $1.wage }
         }
         return list
     }
@@ -116,32 +121,6 @@ struct SquadView: View {
                         selectedPosition = pos
                     }
                 }
-
-                Divider()
-                    .frame(height: 20)
-                    .background(Color.white.opacity(0.2))
-
-                ForEach(SortOption.allCases, id: \.rawValue) { option in
-                    let isActive = sortBy == option
-                    filterChip(
-                        option.rawValue + (isActive ? (sortDirection == .descending ? " ↓" : " ↑") : ""),
-                        isSelected: isActive,
-                        color: .orange
-                    ) {
-                        if sortBy == option {
-                            // Same column tapped: descending → ascending → clear
-                            if sortDirection == .descending {
-                                sortDirection = .ascending
-                            } else {
-                                sortBy = nil
-                                sortDirection = .descending
-                            }
-                        } else {
-                            sortBy = option
-                            sortDirection = .descending
-                        }
-                    }
-                }
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 6)
@@ -153,14 +132,14 @@ struct SquadView: View {
         ScrollView {
             HStack(spacing: 0) {
                 Text("Player").frame(maxWidth: .infinity, alignment: .leading)
-                Text("Pos").frame(width: 36)
-                Text("Age").frame(width: 32)
-                Text("OVR").frame(width: 36)
-                Text("OFF").frame(width: 36)
-                Text("DEF").frame(width: 36)
-                Text("PHY").frame(width: 36)
-                Text("Goals").frame(width: 40)
-                Text("Wage").frame(width: 52)
+                sortableHeader("Pos", option: .position, width: 36)
+                sortableHeader("Age", option: .age, width: 32)
+                sortableHeader("OVR", option: .overall, width: 36)
+                sortableHeader("OFF", option: .offensive, width: 36)
+                sortableHeader("DEF", option: .defensive, width: 36)
+                sortableHeader("PHY", option: .physical, width: 36)
+                sortableHeader("Goals", option: .goals, width: 40)
+                sortableHeader("Wage", option: .wage, width: 52)
                 Text("Status").frame(width: 50)
             }
             .font(.system(size: 9, weight: .bold))
@@ -382,5 +361,37 @@ struct SquadView: View {
 
     private func statColor(_ value: Int) -> Color {
         ColorHelpers.statColor(value)
+    }
+
+    private func sortableHeader(_ label: String, option: SortOption, width: CGFloat) -> some View {
+        Button {
+            tapSort(option)
+        } label: {
+            HStack(spacing: 2) {
+                Text(label)
+                if sortBy == option {
+                    Image(systemName: sortDirection == .descending ? "chevron.down" : "chevron.up")
+                        .font(.system(size: 6, weight: .bold))
+                        .foregroundStyle(.green)
+                }
+            }
+            .frame(width: width)
+            .foregroundStyle(sortBy == option ? .green : .white.opacity(0.4))
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func tapSort(_ option: SortOption) {
+        if sortBy == option {
+            if sortDirection == .descending {
+                sortDirection = .ascending
+            } else {
+                sortBy = nil
+                sortDirection = .descending
+            }
+        } else {
+            sortBy = option
+            sortDirection = .descending
+        }
     }
 }

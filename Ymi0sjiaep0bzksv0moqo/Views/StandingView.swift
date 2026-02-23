@@ -3,11 +3,51 @@ import SwiftUI
 struct StandingsView: View {
     @State var viewModel: GameViewModel
     @State private var selectedLeague: League?
+    @State private var sortBy: SortOption?
+    @State private var sortDirection: SortDirection = .descending
+
+    nonisolated enum SortOption: String, CaseIterable, Sendable {
+        case played = "P"
+        case won = "W"
+        case drawn = "D"
+        case lost = "L"
+        case goalsFor = "GF"
+        case goalsAgainst = "GA"
+        case goalDifference = "GD"
+        case points = "Pts"
+    }
+
+    nonisolated enum SortDirection: Sendable {
+        case descending, ascending
+    }
 
     var displayStandings: [StandingsEntry] {
         guard let league = selectedLeague ?? viewModel.leagues.first(where: { $0.id == viewModel.selectedClub?.leagueId }) else { return [] }
-        return (viewModel.standings[league.id] ?? [])
-            .sorted { ($0.points, $0.goalDifference, $0.goalsFor) > ($1.points, $1.goalDifference, $1.goalsFor) }
+        var list = viewModel.standings[league.id] ?? []
+        if let sortBy {
+            let asc = sortDirection == .ascending
+            switch sortBy {
+            case .played:
+                list.sort { asc ? $0.played < $1.played : $0.played > $1.played }
+            case .won:
+                list.sort { asc ? $0.won < $1.won : $0.won > $1.won }
+            case .drawn:
+                list.sort { asc ? $0.drawn < $1.drawn : $0.drawn > $1.drawn }
+            case .lost:
+                list.sort { asc ? $0.lost < $1.lost : $0.lost > $1.lost }
+            case .goalsFor:
+                list.sort { asc ? $0.goalsFor < $1.goalsFor : $0.goalsFor > $1.goalsFor }
+            case .goalsAgainst:
+                list.sort { asc ? $0.goalsAgainst < $1.goalsAgainst : $0.goalsAgainst > $1.goalsAgainst }
+            case .goalDifference:
+                list.sort { asc ? $0.goalDifference < $1.goalDifference : $0.goalDifference > $1.goalDifference }
+            case .points:
+                list.sort { asc ? $0.points < $1.points : $0.points > $1.points }
+            }
+        } else {
+            list.sort { ($0.points, $0.goalDifference, $0.goalsFor) > ($1.points, $1.goalDifference, $1.goalsFor) }
+        }
+        return list
     }
 
     var body: some View {
@@ -90,18 +130,19 @@ struct StandingsView: View {
             VStack(spacing: 0) {
                 HStack(spacing: 0) {
                     Text("#").frame(width: 24, alignment: .center)
+                        .foregroundStyle(.white.opacity(0.4))
                     Text("Club").frame(maxWidth: .infinity, alignment: .leading)
-                    Text("P").frame(width: 28)
-                    Text("W").frame(width: 28)
-                    Text("D").frame(width: 28)
-                    Text("L").frame(width: 28)
-                    Text("GF").frame(width: 32)
-                    Text("GA").frame(width: 32)
-                    Text("GD").frame(width: 32)
-                    Text("Pts").frame(width: 36)
+                        .foregroundStyle(.white.opacity(0.4))
+                    sortableHeader("P", option: .played, width: 28)
+                    sortableHeader("W", option: .won, width: 28)
+                    sortableHeader("D", option: .drawn, width: 28)
+                    sortableHeader("L", option: .lost, width: 28)
+                    sortableHeader("GF", option: .goalsFor, width: 32)
+                    sortableHeader("GA", option: .goalsAgainst, width: 32)
+                    sortableHeader("GD", option: .goalDifference, width: 32)
+                    sortableHeader("Pts", option: .points, width: 36)
                 }
                 .font(.system(size: 9, weight: .bold))
-                .foregroundStyle(.white.opacity(0.4))
                 .padding(.horizontal, 12)
                 .padding(.vertical, 6)
                 .background(Color.white.opacity(0.03))
@@ -146,5 +187,37 @@ struct StandingsView: View {
         if idx < 4 { return .blue }
         if idx >= total - 3 { return .red }
         return .white.opacity(0.5)
+    }
+
+    private func sortableHeader(_ label: String, option: SortOption, width: CGFloat) -> some View {
+        Button {
+            tapSort(option)
+        } label: {
+            HStack(spacing: 2) {
+                Text(label)
+                if sortBy == option {
+                    Image(systemName: sortDirection == .descending ? "chevron.down" : "chevron.up")
+                        .font(.system(size: 6, weight: .bold))
+                        .foregroundStyle(.green)
+                }
+            }
+            .frame(width: width)
+            .foregroundStyle(sortBy == option ? .green : .white.opacity(0.4))
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func tapSort(_ option: SortOption) {
+        if sortBy == option {
+            if sortDirection == .descending {
+                sortDirection = .ascending
+            } else {
+                sortBy = nil
+                sortDirection = .descending
+            }
+        } else {
+            sortBy = option
+            sortDirection = .descending
+        }
     }
 }

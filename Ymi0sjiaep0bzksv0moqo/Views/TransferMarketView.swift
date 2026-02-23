@@ -8,6 +8,27 @@ struct TransferMarketView: View {
     @State private var offerAmount: String = ""
     @State private var showingOffer: Bool = false
     @State private var positionFilter: PlayerPosition?
+    @State private var sortBy: SortOption?
+    @State private var sortDirection: SortDirection = .descending
+
+    nonisolated enum SortOption: String, CaseIterable, Sendable {
+        case position = "Pos"
+        case age = "Age"
+        case overall = "OVR"
+        case offensive = "OFF"
+        case defensive = "DEF"
+        case value = "Value"
+    }
+
+    nonisolated enum SortDirection: Sendable {
+        case descending, ascending
+    }
+
+    static let positionOrder: [PlayerPosition] = [
+        .goalkeeper, .centerBack, .leftBack, .rightBack,
+        .defensiveMidfield, .centralMidfield, .attackingMidfield,
+        .leftWing, .rightWing, .striker
+    ]
 
     nonisolated enum TransferTab: String, CaseIterable, Sendable {
         case buy = "Buy"
@@ -41,7 +62,31 @@ struct TransferMarketView: View {
             list = list.filter { $0.fullName.localizedStandardContains(searchText) }
         }
 
-        return Array(list.sorted { $0.stats.overall > $1.stats.overall }.prefix(50))
+        if let sortBy {
+            let asc = sortDirection == .ascending
+            switch sortBy {
+            case .position:
+                let order = Self.positionOrder
+                list.sort {
+                    let i0 = order.firstIndex(of: $0.position) ?? 99
+                    let i1 = order.firstIndex(of: $1.position) ?? 99
+                    return asc ? i0 > i1 : i0 < i1
+                }
+            case .age:
+                list.sort { asc ? $0.age > $1.age : $0.age < $1.age }
+            case .overall:
+                list.sort { asc ? $0.stats.overall < $1.stats.overall : $0.stats.overall > $1.stats.overall }
+            case .offensive:
+                list.sort { asc ? $0.stats.offensive < $1.stats.offensive : $0.stats.offensive > $1.stats.offensive }
+            case .defensive:
+                list.sort { asc ? $0.stats.defensive < $1.stats.defensive : $0.stats.defensive > $1.stats.defensive }
+            case .value:
+                list.sort { asc ? $0.marketValue < $1.marketValue : $0.marketValue > $1.marketValue }
+            }
+        } else {
+            list.sort { $0.stats.overall > $1.stats.overall }
+        }
+        return Array(list.prefix(50))
     }
 
     var body: some View {
@@ -149,18 +194,21 @@ struct TransferMarketView: View {
     private var playerTable: some View {
         ScrollView {
             HStack(spacing: 0) {
-                Text("Player").frame(maxWidth: .infinity, alignment: .leading)
-                Text("Pos").frame(width: 32)
-                Text("Age").frame(width: 32)
-                Text("OVR").frame(width: 36)
-                Text("OFF").frame(width: 36)
-                Text("DEF").frame(width: 36)
-                Text("Club").frame(width: 70)
-                Text("Value").frame(width: 60)
+                Text("Player")
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .foregroundStyle(.white.opacity(0.4))
+                sortableHeader("Pos", option: .position, width: 32)
+                sortableHeader("Age", option: .age, width: 32)
+                sortableHeader("OVR", option: .overall, width: 36)
+                sortableHeader("OFF", option: .offensive, width: 36)
+                sortableHeader("DEF", option: .defensive, width: 36)
+                Text("Club")
+                    .frame(width: 70)
+                    .foregroundStyle(.white.opacity(0.4))
+                sortableHeader("Value", option: .value, width: 60)
                 Text("").frame(width: 60)
             }
             .font(.system(size: 9, weight: .bold))
-            .foregroundStyle(.white.opacity(0.3))
             .padding(.horizontal, 12)
             .padding(.vertical, 6)
             .background(Color.white.opacity(0.03))
@@ -340,5 +388,37 @@ struct TransferMarketView: View {
 
     private func statColor(_ value: Int) -> Color {
         ColorHelpers.statColor(value)
+    }
+
+    private func sortableHeader(_ label: String, option: SortOption, width: CGFloat) -> some View {
+        Button {
+            tapSort(option)
+        } label: {
+            HStack(spacing: 2) {
+                Text(label)
+                if sortBy == option {
+                    Image(systemName: sortDirection == .descending ? "chevron.down" : "chevron.up")
+                        .font(.system(size: 6, weight: .bold))
+                        .foregroundStyle(.green)
+                }
+            }
+            .frame(width: width)
+            .foregroundStyle(sortBy == option ? .green : .white.opacity(0.4))
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func tapSort(_ option: SortOption) {
+        if sortBy == option {
+            if sortDirection == .descending {
+                sortDirection = .ascending
+            } else {
+                sortBy = nil
+                sortDirection = .descending
+            }
+        } else {
+            sortBy = option
+            sortDirection = .descending
+        }
     }
 }
