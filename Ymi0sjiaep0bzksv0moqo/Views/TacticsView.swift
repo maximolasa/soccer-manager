@@ -26,7 +26,27 @@ struct TacticsView: View {
         let xiIds = Set(startingXI.map(\.id))
         return viewModel.myPlayers
             .filter { !xiIds.contains($0.id) && !$0.isInjured }
-            .sorted { $0.stats.overall > $1.stats.overall }
+            .sorted { a, b in
+                let orderA = positionSortOrder(a.position)
+                let orderB = positionSortOrder(b.position)
+                if orderA != orderB { return orderA < orderB }
+                return a.stats.overall > b.stats.overall
+            }
+    }
+
+    private func positionSortOrder(_ pos: PlayerPosition) -> Int {
+        switch pos {
+        case .goalkeeper: return 0
+        case .centerBack: return 1
+        case .leftBack: return 2
+        case .rightBack: return 3
+        case .defensiveMidfield: return 4
+        case .centralMidfield: return 5
+        case .attackingMidfield: return 6
+        case .leftWing: return 7
+        case .rightWing: return 8
+        case .striker: return 9
+        }
     }
 
     private var benchForSelectedSlot: [Player] {
@@ -163,27 +183,7 @@ struct TacticsView: View {
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 8)
-        .background(
-            LinearGradient(
-                colors: [clubHeaderColor, clubHeaderColorDark],
-                startPoint: .leading,
-                endPoint: .trailing
-            )
-        )
-    }
-
-    private var clubHeaderColor: Color {
-        guard let club = viewModel.selectedClub else {
-            return Color(red: 0.35, green: 0.1, blue: 0.18)
-        }
-        return club.primarySwiftUIColor.opacity(0.85)
-    }
-
-    private var clubHeaderColorDark: Color {
-        guard let club = viewModel.selectedClub else {
-            return Color(red: 0.22, green: 0.07, blue: 0.13)
-        }
-        return club.primarySwiftUIColor.opacity(0.55)
+        .background(Color(white: 0.1))
     }
 
     private func opponentName(for match: Match) -> String {
