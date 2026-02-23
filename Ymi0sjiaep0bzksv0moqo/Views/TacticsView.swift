@@ -249,16 +249,55 @@ struct TacticsView: View {
 
     private var leftPanel: some View {
         VStack(spacing: 0) {
-            // Panel header
-            Text("TACTICS")
-                .font(.system(size: 9, weight: .black))
+            // Stats summary at top
+            VStack(spacing: 6) {
+                statRow(icon: "chart.bar.fill", label: "AVG OVR", value: String(format: "%.0f", averageOVR), color: .orange)
+                statRow(icon: "person.3.fill", label: "Players", value: "\(startingXI.count)/11", color: .green)
+                statRow(icon: "heart.fill", label: "Morale",
+                        value: startingXI.isEmpty ? "--" :
+                            "\(startingXI.reduce(0) { $0 + $1.morale } / max(1, startingXI.count))",
+                        color: .pink)
+            }
+            .padding(.horizontal, 8)
+            .padding(.top, 10)
+            .padding(.bottom, 8)
+
+            Divider().overlay(Color.white.opacity(0.1)).padding(.horizontal, 6)
+
+            // Formations header
+            Text("FORMATIONS")
+                .font(.system(size: 8, weight: .black))
                 .foregroundStyle(.white.opacity(0.4))
                 .tracking(1)
-                .padding(.top, 10)
-                .padding(.bottom, 6)
+                .padding(.top, 8)
+                .padding(.bottom, 4)
 
             ScrollView(.vertical, showsIndicators: false) {
-                VStack(spacing: 10) {
+                VStack(spacing: 4) {
+                    ForEach(formations, id: \.self) { f in
+                        Button {
+                            viewModel.selectedClub?.formation = f
+                        } label: {
+                            Text(f)
+                                .font(.system(size: 10, weight: .bold, design: .monospaced))
+                                .foregroundStyle(formation == f ? .black : .white.opacity(0.5))
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 5)
+                                .background(formation == f ? Color.orange : Color.white.opacity(0.06))
+                                .clipShape(.rect(cornerRadius: 4))
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(.horizontal, 8)
+                .padding(.bottom, 8)
+            }
+
+            Divider().overlay(Color.white.opacity(0.1)).padding(.horizontal, 6)
+
+            // Tactics instructions
+            ScrollView(.vertical, showsIndicators: false) {
+                VStack(spacing: 8) {
                     compactInstructionRow("MENTALITY", options: ["DEF", "BAL", "ATK"],
                                           fullOptions: ["Defensive", "Balanced", "Attacking"],
                                           value: viewModel.selectedClub?.mentality ?? "Balanced") {
@@ -282,21 +321,9 @@ struct TacticsView: View {
                                           value: viewModel.selectedClub?.playWidth ?? "Normal") {
                         viewModel.selectedClub?.playWidth = $0
                     }
-
-                    // Stats summary
-                    Divider().overlay(Color.white.opacity(0.1))
-
-                    VStack(spacing: 6) {
-                        statRow(icon: "chart.bar.fill", label: "AVG OVR", value: String(format: "%.0f", averageOVR), color: .orange)
-                        statRow(icon: "person.3.fill", label: "Players", value: "\(startingXI.count)/11", color: .green)
-                        statRow(icon: "heart.fill", label: "Morale",
-                                value: startingXI.isEmpty ? "--" :
-                                    "\(startingXI.reduce(0) { $0 + $1.morale } / max(1, startingXI.count))",
-                                color: .pink)
-                    }
                 }
                 .padding(.horizontal, 8)
-                .padding(.bottom, 12)
+                .padding(.vertical, 6)
             }
         }
         .background(Color(red: 0.06, green: 0.07, blue: 0.14).opacity(0.9))
@@ -645,11 +672,16 @@ struct TacticsView: View {
                         .foregroundStyle(.white)
                 }
 
-                // Name
-                Text(player.lastName)
-                    .font(.system(size: 9, weight: .bold))
-                    .foregroundStyle(.white)
-                    .lineLimit(1)
+                // Name + Age
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(player.lastName)
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundStyle(.white)
+                        .lineLimit(1)
+                    Text("Age \(player.age)")
+                        .font(.system(size: 7, weight: .medium))
+                        .foregroundStyle(.white.opacity(0.4))
+                }
 
                 Spacer()
 
