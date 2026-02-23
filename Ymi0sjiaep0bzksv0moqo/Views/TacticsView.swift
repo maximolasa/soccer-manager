@@ -58,11 +58,8 @@ struct TacticsView: View {
             Color(red: 0.06, green: 0.08, blue: 0.12).ignoresSafeArea()
 
             VStack(spacing: 0) {
-                // Top header
-                headerBar
-
-                // Tabs + Match Info
-                tabsAndMatchInfo
+                // Single unified header
+                unifiedHeader
 
                 // Main content: tactics | pitch | substitutes
                 mainContent
@@ -76,40 +73,60 @@ struct TacticsView: View {
         }
     }
 
-    // MARK: - Header Bar
+    // MARK: - Unified Header
 
-    private var headerBar: some View {
-        HStack(spacing: 0) {
-            // Left: Back + title
+    private var unifiedHeader: some View {
+        HStack(spacing: 10) {
+            // Back
             Button {
                 viewModel.currentScreen = .dashboard
             } label: {
-                HStack(spacing: 4) {
-                    Image(systemName: "chevron.left")
-                        .font(.system(size: 12, weight: .semibold))
-                    Text("Back")
-                        .font(.system(size: 12))
-                }
-                .foregroundStyle(.white.opacity(0.7))
+                Image(systemName: "chevron.left")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.7))
             }
             .buttonStyle(.plain)
 
-            Spacer()
-
-            // Center: Title
-            VStack(spacing: 1) {
-                Text("TEAM MANAGEMENT")
-                    .font(.system(size: 14, weight: .black))
+            // Club shield + name
+            HStack(spacing: 6) {
+                Image(systemName: "shield.fill")
+                    .font(.system(size: 18))
+                    .foregroundStyle(viewModel.selectedClub?.primarySwiftUIColor ?? .blue)
+                Text(viewModel.selectedClub?.name ?? "Club")
+                    .font(.system(size: 12, weight: .bold))
                     .foregroundStyle(.white)
-                    .tracking(1.5)
-                Text("Formation")
-                    .font(.system(size: 10, weight: .medium))
-                    .foregroundStyle(.white.opacity(0.5))
+            }
+
+            // Divider
+            Rectangle()
+                .fill(.white.opacity(0.15))
+                .frame(width: 1, height: 18)
+
+            // Tabs
+            HStack(spacing: 2) {
+                ForEach(TacticsTab.allCases, id: \.self) { tab in
+                    Button {
+                        selectedTab = tab
+                    } label: {
+                        Text(tab.rawValue)
+                            .font(.system(size: 11, weight: selectedTab == tab ? .bold : .medium))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(
+                                selectedTab == tab
+                                    ? Color.white.opacity(0.12)
+                                    : Color.clear
+                            )
+                            .clipShape(.rect(cornerRadius: 5))
+                    }
+                    .buttonStyle(.plain)
+                }
             }
 
             Spacer()
 
-            // Auto Pick button
+            // Auto Pick
             Button {
                 selectedSlot = nil
                 quickPickXI()
@@ -127,28 +144,9 @@ struct TacticsView: View {
                 .clipShape(.capsule)
             }
             .buttonStyle(.plain)
-
-            Spacer().frame(width: 10)
-
-            // Right: Club info
-            HStack(spacing: 8) {
-                VStack(alignment: .trailing, spacing: 2) {
-                    Text(viewModel.selectedClub?.name ?? "Club")
-                        .font(.system(size: 12, weight: .bold))
-                        .foregroundStyle(.white)
-                    Text(viewModel.currentLeagueStandings.isEmpty ? "" :
-                            ordinalPosition(viewModel.currentLeagueStandings))
-                        .font(.system(size: 9))
-                        .foregroundStyle(.white.opacity(0.5))
-                }
-
-                Image(systemName: "shield.fill")
-                    .font(.system(size: 22))
-                    .foregroundStyle(viewModel.selectedClub?.primarySwiftUIColor ?? .blue)
-            }
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 8)
         .background(
             LinearGradient(
                 colors: [Color(red: 0.35, green: 0.1, blue: 0.18), Color(red: 0.22, green: 0.07, blue: 0.13)],
@@ -156,72 +154,6 @@ struct TacticsView: View {
                 endPoint: .trailing
             )
         )
-    }
-
-    private func ordinalPosition(_ standings: [StandingsEntry]) -> String {
-        guard let clubId = viewModel.selectedClubId,
-              let idx = standings.firstIndex(where: { $0.clubId == clubId }) else { return "" }
-        let pos = idx + 1
-        let suffix: String
-        switch pos {
-        case 1: suffix = "st"
-        case 2: suffix = "nd"
-        case 3: suffix = "rd"
-        default: suffix = "th"
-        }
-        return "\(pos)\(suffix) in League"
-    }
-
-    // MARK: - Tabs + Match Info
-
-    private var tabsAndMatchInfo: some View {
-        HStack(spacing: 0) {
-            // Tabs
-            HStack(spacing: 2) {
-                ForEach(TacticsTab.allCases, id: \.self) { tab in
-                    Button {
-                        selectedTab = tab
-                    } label: {
-                        Text(tab.rawValue)
-                            .font(.system(size: 11, weight: selectedTab == tab ? .bold : .medium))
-                            .foregroundStyle(.white)
-                            .padding(.horizontal, 14)
-                            .padding(.vertical, 7)
-                            .background(
-                                selectedTab == tab
-                                    ? Color.white.opacity(0.12)
-                                    : Color.clear
-                            )
-                            .clipShape(.rect(cornerRadius: 5))
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-
-            Spacer()
-
-            // Next match info
-            if let match = viewModel.nextMatch {
-                let opponent = opponentName(for: match)
-                let isHome = match.homeClubId == viewModel.selectedClubId
-                VStack(alignment: .trailing, spacing: 2) {
-                    Text("VS: \(opponent)(\(isHome ? "H" : "A")) \(match.matchType.rawValue)")
-                        .font(.system(size: 10, weight: .medium))
-                        .foregroundStyle(.white.opacity(0.85))
-                    Text("Their Formation: \(formation) (ATK)")
-                        .font(.system(size: 9))
-                        .foregroundStyle(.white.opacity(0.5))
-                }
-            }
-        }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 8)
-        .background(Color(red: 0.08, green: 0.1, blue: 0.22))
-    }
-
-    private func opponentName(for match: Match) -> String {
-        let oppId = match.homeClubId == viewModel.selectedClubId ? match.awayClubId : match.homeClubId
-        return viewModel.clubs.first(where: { $0.id == oppId })?.name ?? "Opponent"
     }
 
     // MARK: - Main Content
@@ -277,18 +209,18 @@ struct TacticsView: View {
 
     private var formationsTabContent: some View {
         ScrollView(.vertical, showsIndicators: false) {
-            VStack(spacing: 4) {
+            VStack(spacing: 5) {
                 ForEach(formations, id: \.self) { f in
                     Button {
                         viewModel.selectedClub?.formation = f
                     } label: {
                         Text(f)
-                            .font(.system(size: 10, weight: .bold, design: .monospaced))
+                            .font(.system(size: 12, weight: .bold, design: .monospaced))
                             .foregroundStyle(formation == f ? .black : .white.opacity(0.5))
                             .frame(maxWidth: .infinity)
-                            .padding(.vertical, 5)
+                            .padding(.vertical, 7)
                             .background(formation == f ? Color.orange : Color.white.opacity(0.06))
-                            .clipShape(.rect(cornerRadius: 4))
+                            .clipShape(.rect(cornerRadius: 5))
                     }
                     .buttonStyle(.plain)
                 }
