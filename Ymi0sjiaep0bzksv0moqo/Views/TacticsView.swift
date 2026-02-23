@@ -188,7 +188,7 @@ struct TacticsView: View {
                 let opponent = opponentName(for: match)
                 let isHome = match.homeClubId == viewModel.selectedClubId
                 VStack(alignment: .trailing, spacing: 2) {
-                    Text("VS: \(opponent)(\(isHome ? "H" : "A")) \(match.type)")
+                    Text("VS: \(opponent)(\(isHome ? "H" : "A")) \(match.matchType.rawValue)")
                         .font(.system(size: 10, weight: .medium))
                         .foregroundStyle(.white.opacity(0.85))
                     Text("Their Formation: \(formation) (ATK)")
