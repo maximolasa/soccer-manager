@@ -21,6 +21,7 @@ struct MainDashboardView: View {
                     rightColumn
                 }
                 .padding(12)
+                .frame(maxHeight: .infinity)
                 bottomBar
             }
         }
@@ -78,7 +79,7 @@ struct MainDashboardView: View {
                 }
             }
         }
-        .padding(.horizontal, 16)
+        .padding(.horizontal, 24)
         .padding(.vertical, 8)
         .background(Color(white: 0.1))
     }
@@ -88,7 +89,7 @@ struct MainDashboardView: View {
             nextMatchCard
             upcomingFixturesCard
         }
-        .frame(maxWidth: .infinity)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     private var centerColumn: some View {
@@ -97,7 +98,7 @@ struct MainDashboardView: View {
             transfersCard
             competitionsCard
         }
-        .frame(maxWidth: .infinity)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     private var rightColumn: some View {
@@ -106,7 +107,7 @@ struct MainDashboardView: View {
             quickActionsGrid
             newsCard
         }
-        .frame(maxWidth: .infinity)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     private var nextMatchCard: some View {
@@ -172,7 +173,7 @@ struct MainDashboardView: View {
     }
 
     private var upcomingFixturesCard: some View {
-        DashboardCard(title: "UPCOMING", icon: "calendar", accentColor: .blue) {
+        DashboardCard(title: "UPCOMING", icon: "calendar", accentColor: .blue, expandVertically: true) {
             VStack(spacing: 4) {
                 ForEach(Array(viewModel.upcomingFixtures.prefix(3))) { match in
                     HStack {
@@ -229,7 +230,7 @@ struct MainDashboardView: View {
         Button {
             viewModel.currentScreen = .standings
         } label: {
-            DashboardCard(title: "STANDINGS", icon: "trophy.fill", accentColor: .yellow) {
+            DashboardCard(title: "STANDINGS", icon: "trophy.fill", accentColor: .yellow, expandVertically: true) {
                 VStack(spacing: 2) {
                     ForEach(Array(viewModel.currentLeagueStandings.prefix(5).enumerated()), id: \.element.id) { idx, entry in
                         HStack {
@@ -250,6 +251,7 @@ struct MainDashboardView: View {
             }
         }
         .buttonStyle(.plain)
+        .frame(maxHeight: .infinity)
     }
 
     private var managerCard: some View {
@@ -280,7 +282,7 @@ struct MainDashboardView: View {
     }
 
     private var newsCard: some View {
-        DashboardCard(title: "NEWS", icon: "newspaper.fill", accentColor: .green) {
+        DashboardCard(title: "NEWS", icon: "newspaper.fill", accentColor: .green, expandVertically: true) {
             VStack(alignment: .leading, spacing: 3) {
                 ForEach(Array(viewModel.newsMessages.prefix(3).enumerated()), id: \.offset) { _, msg in
                     Text(msg)
@@ -403,6 +405,7 @@ struct DashboardCard<Content: View>: View {
     let title: String
     let icon: String
     let accentColor: Color
+    var expandVertically: Bool = false
     @ViewBuilder let content: () -> Content
 
     var body: some View {
@@ -418,9 +421,13 @@ struct DashboardCard<Content: View>: View {
             }
 
             content()
+
+            if expandVertically {
+                Spacer(minLength: 0)
+            }
         }
         .padding(10)
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity, maxHeight: expandVertically ? .infinity : nil, alignment: .topLeading)
         .background(Color.white.opacity(0.05))
         .clipShape(.rect(cornerRadius: 12))
         .overlay(

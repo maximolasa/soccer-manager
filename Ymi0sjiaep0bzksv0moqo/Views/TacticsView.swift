@@ -181,7 +181,7 @@ struct TacticsView: View {
             }
             .buttonStyle(.plain)
         }
-        .padding(.horizontal, 14)
+        .padding(.horizontal, 24)
         .padding(.vertical, 8)
         .background(Color(white: 0.1))
     }
