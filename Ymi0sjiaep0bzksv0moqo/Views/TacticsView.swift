@@ -82,7 +82,7 @@ struct TacticsView: View {
             mainContent
         }
         .animation(.spring(duration: 0.25), value: selectedSlot)
-        .background(Color(red: 0.06, green: 0.08, blue: 0.12).ignoresSafeArea())
+        .background(Color(red: 0.06, green: 0.08, blue: 0.12), ignoresSafeAreaEdges: .all)
         .onAppear { quickPickXI() }
         .onChange(of: viewModel.selectedClub?.formation) { _, _ in
             selectedSlot = nil

@@ -21,7 +21,7 @@ struct MainDashboardView: View {
             .frame(maxHeight: .infinity)
             bottomBar
         }
-        .background(Color(red: 0.06, green: 0.08, blue: 0.1).ignoresSafeArea())
+        .background(Color(red: 0.06, green: 0.08, blue: 0.1), ignoresSafeAreaEdges: .all)
     }
 
     private var topBar: some View {

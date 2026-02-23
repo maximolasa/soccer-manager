@@ -17,8 +17,6 @@ struct MatchView: View {
 
     var body: some View {
         ZStack {
-            Color(red: 0.04, green: 0.06, blue: 0.08).ignoresSafeArea()
-
             if let match {
                 VStack(spacing: 0) {
                     matchHeader(match)
@@ -32,6 +30,8 @@ struct MatchView: View {
                 }
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color(red: 0.04, green: 0.06, blue: 0.08), ignoresSafeAreaEdges: .all)
     }
 
     private func matchHeader(_ match: Match) -> some View {

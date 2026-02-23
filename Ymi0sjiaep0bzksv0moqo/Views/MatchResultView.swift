@@ -7,8 +7,6 @@ struct MatchResultView: View {
 
     var body: some View {
         ZStack {
-            Color(red: 0.04, green: 0.06, blue: 0.08).ignoresSafeArea()
-
             if let match {
                 VStack(spacing: 16) {
                     Spacer()
@@ -104,6 +102,8 @@ struct MatchResultView: View {
                 }
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color(red: 0.04, green: 0.06, blue: 0.08), ignoresSafeAreaEdges: .all)
     }
 
     private func clubBadge(_ name: String) -> some View {
