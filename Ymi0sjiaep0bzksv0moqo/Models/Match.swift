@@ -51,6 +51,7 @@ class Match: Identifiable {
     var awayShotsOnTarget: Int
     var leagueId: UUID?
     var playerRatings: [UUID: Double] = [:]
+    var matchday: Int = 0
 
     init(
         homeClubId: UUID,
@@ -59,7 +60,8 @@ class Match: Identifiable {
         awayClubName: String,
         matchType: MatchType,
         date: Date,
-        leagueId: UUID? = nil
+        leagueId: UUID? = nil,
+        matchday: Int = 0
     ) {
         self.id = UUID()
         self.homeClubId = homeClubId
@@ -79,6 +81,7 @@ class Match: Identifiable {
         self.homeShotsOnTarget = 0
         self.awayShotsOnTarget = 0
         self.leagueId = leagueId
+        self.matchday = matchday
     }
 }
 
