@@ -126,6 +126,22 @@ struct TacticsView: View {
 
             Spacer()
 
+            // Next match info
+            if let match = viewModel.nextMatch {
+                let opponent = opponentName(for: match)
+                let isHome = match.homeClubId == viewModel.selectedClubId
+                HStack(spacing: 4) {
+                    Image(systemName: "sportscourt.fill")
+                        .font(.system(size: 8))
+                        .foregroundStyle(.white.opacity(0.5))
+                    Text("Next: vs \(opponent) (\(isHome ? "H" : "A"))")
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundStyle(.white.opacity(0.7))
+                }
+            }
+
+            Spacer().frame(width: 8)
+
             // Auto Pick
             Button {
                 selectedSlot = nil
@@ -149,11 +165,30 @@ struct TacticsView: View {
         .padding(.vertical, 8)
         .background(
             LinearGradient(
-                colors: [Color(red: 0.35, green: 0.1, blue: 0.18), Color(red: 0.22, green: 0.07, blue: 0.13)],
+                colors: [clubHeaderColor, clubHeaderColorDark],
                 startPoint: .leading,
                 endPoint: .trailing
             )
         )
+    }
+
+    private var clubHeaderColor: Color {
+        guard let club = viewModel.selectedClub else {
+            return Color(red: 0.35, green: 0.1, blue: 0.18)
+        }
+        return club.primarySwiftUIColor.opacity(0.85)
+    }
+
+    private var clubHeaderColorDark: Color {
+        guard let club = viewModel.selectedClub else {
+            return Color(red: 0.22, green: 0.07, blue: 0.13)
+        }
+        return club.primarySwiftUIColor.opacity(0.55)
+    }
+
+    private func opponentName(for match: Match) -> String {
+        let oppId = match.homeClubId == viewModel.selectedClubId ? match.awayClubId : match.homeClubId
+        return viewModel.clubs.first(where: { $0.id == oppId })?.name ?? "Opponent"
     }
 
     // MARK: - Main Content
