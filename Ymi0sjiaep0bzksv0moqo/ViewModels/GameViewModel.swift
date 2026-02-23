@@ -126,8 +126,7 @@ class GameViewModel {
     func startNewGame(clubId: UUID) {
         selectedClubId = clubId
         generateFriendlies()
-        generateLeagueFixtures()
-        generateCupFixtures()
+        generateSeasonSchedule()
         initializeStandings()
         generateFreeAgents()
         currentScreen = .dashboard
@@ -180,100 +179,139 @@ class GameViewModel {
         }
     }
 
-    func generateLeagueFixtures() {
+    // MARK: - Season Schedule Generation
+
+    /// Generates all league fixtures + cup R16 on a unified, realistic calendar.
+    /// - League matchdays every 4-5 days when no cup is scheduled
+    /// - Cup rounds interleaved: League → 3 days → Cup → 4 days → League
+    /// - All leagues share the same matchday dates
+    func generateSeasonSchedule() {
         let cal = Calendar.current
-        // League starts 1 month after game start, matchdays every 14 days
         let seasonStart = cal.date(byAdding: .month, value: 1, to: currentDate)!
+
+        // ---------- 1. Round-robin pairings per league ----------
+
+        struct LeagueRounds {
+            let league: League
+            let clubs: [Club]
+            let rounds: [[(home: Int, away: Int)]]
+        }
+
+        var allLeagueRounds: [LeagueRounds] = []
 
         for league in leagues {
             let leagueClubs = clubs.filter { $0.leagueId == league.id }.shuffled()
             let n = leagueClubs.count
             guard n >= 2 else { continue }
 
-            // Round-robin schedule using the "circle method"
-            // If odd, add phantom for bye; all 20-team leagues are even so this is a safety net
-            var ids = leagueClubs.map { $0.id }
             let hasBye = n % 2 != 0
-            if hasBye { ids.append(UUID()) }
-            let teamCount = ids.count
+            let teamCount = hasBye ? n + 1 : n
             let roundsPerHalf = teamCount - 1
             let matchesPerRound = teamCount / 2
 
-            // Build rounds by rotating all indices except index 0
-            var rounds: [[(Int, Int)]] = []
+            // Circle-method rotation
+            var halfRounds: [[(Int, Int)]] = []
             var rotatable = Array(1..<teamCount)
 
             for _ in 0..<roundsPerHalf {
                 var pairings: [(Int, Int)] = []
-                // First pairing: fixed team 0 vs last of rotatable
                 pairings.append((0, rotatable[rotatable.count - 1]))
-                // Remaining pairings
                 for m in 0..<(matchesPerRound - 1) {
                     pairings.append((rotatable[m], rotatable[rotatable.count - 2 - m]))
                 }
-                rounds.append(pairings)
-                // Rotate: move last element to front
+                halfRounds.append(pairings)
                 let last = rotatable.removeLast()
                 rotatable.insert(last, at: 0)
             }
 
-            // First half: home/away as generated. Second half: reversed.
-            for half in 0..<2 {
-                for (roundIdx, pairings) in rounds.enumerated() {
-                    let matchday = half * roundsPerHalf + roundIdx + 1
-                    let dayOffset = (matchday - 1) * 14
-                    let matchDate = cal.date(byAdding: .day, value: dayOffset, to: seasonStart)!
+            // Full season: first half + second half (home/away swapped)
+            var fullRounds: [[(Int, Int)]] = []
+            for r in halfRounds { fullRounds.append(r) }
+            for r in halfRounds { fullRounds.append(r.map { ($0.1, $0.0) }) }
 
-                    for (a, b) in pairings {
-                        // Skip bye (phantom index)
-                        guard a < n && b < n else { continue }
+            allLeagueRounds.append(LeagueRounds(
+                league: league, clubs: leagueClubs, rounds: fullRounds
+            ))
+        }
 
-                        let homeIdx = half == 0 ? a : b
-                        let awayIdx = half == 0 ? b : a
-                        let homeClub = leagueClubs[homeIdx]
-                        let awayClub = leagueClubs[awayIdx]
+        // ---------- 2. Cup R16 pairings ----------
 
-                        let match = Match(
-                            homeClubId: homeClub.id,
-                            awayClubId: awayClub.id,
-                            homeClubName: homeClub.name,
-                            awayClubName: awayClub.name,
-                            matchType: .league,
-                            date: matchDate,
-                            leagueId: league.id,
-                            matchday: matchday
-                        )
-                        seasonFixtures.append(match)
-                    }
-                }
+        var cupR16Pairs: [(home: Club, away: Club)] = []
+        if let playerClub = selectedClub,
+           let playerLeague = leagues.first(where: { $0.id == playerClub.leagueId }),
+           playerLeague.hasNationalCup {
+            let leagueClubs = clubs.filter { $0.leagueId == playerLeague.id }.shuffled()
+            var roundClubs = Array(leagueClubs.prefix(16))
+            if !roundClubs.contains(where: { $0.id == playerClub.id }) {
+                roundClubs[roundClubs.count - 1] = playerClub
+            }
+            for i in stride(from: 0, to: roundClubs.count - 1, by: 2) {
+                cupR16Pairs.append((home: roundClubs[i], away: roundClubs[i + 1]))
             }
         }
+
+        // ---------- 3. Walk the calendar and assign dates ----------
+
+        let totalMatchdays = allLeagueRounds.map { $0.rounds.count }.max() ?? 0
+        guard totalMatchdays > 0 else { return }
+
+        // Cup R16 inserted after this league matchday
+        let cupR16Slot = 8
+
+        var cursor = seasonStart
+
+        for md in 1...totalMatchdays {
+            // Create league matches for every league on this date
+            for data in allLeagueRounds {
+                let idx = md - 1
+                guard idx < data.rounds.count else { continue }
+                let n = data.clubs.count
+
+                for (homeIdx, awayIdx) in data.rounds[idx] {
+                    guard homeIdx < n && awayIdx < n else { continue }
+                    let homeClub = data.clubs[homeIdx]
+                    let awayClub = data.clubs[awayIdx]
+
+                    let match = Match(
+                        homeClubId: homeClub.id,
+                        awayClubId: awayClub.id,
+                        homeClubName: homeClub.name,
+                        awayClubName: awayClub.name,
+                        matchType: .league,
+                        date: cursor,
+                        leagueId: data.league.id,
+                        matchday: md
+                    )
+                    seasonFixtures.append(match)
+                }
+            }
+
+            // Check if cup round follows this matchday
+            if md == cupR16Slot && !cupR16Pairs.isEmpty {
+                // League → 3 days → Cup
+                cursor = cal.date(byAdding: .day, value: 3, to: cursor)!
+
+                for (home, away) in cupR16Pairs {
+                    let match = Match(
+                        homeClubId: home.id,
+                        awayClubId: away.id,
+                        homeClubName: home.name,
+                        awayClubName: away.name,
+                        matchType: .nationalCup,
+                        date: cursor
+                    )
+                    cupFixtures.append(match)
+                }
+
+                // Cup → 4 days → next League
+                cursor = cal.date(byAdding: .day, value: 4, to: cursor)!
+            } else {
+                // Normal gap between league matchdays: 4-5 days
+                cursor = cal.date(byAdding: .day, value: Int.random(in: 4...5), to: cursor)!
+            }
+        }
+
         seasonFixtures.sort { $0.date < $1.date }
-    }
-
-    func generateCupFixtures() {
-        guard let club = selectedClub else { return }
-        let league = leagues.first { $0.id == club.leagueId }
-        guard let league, league.hasNationalCup else { return }
-
-        let leagueClubs = clubs.filter { $0.leagueId == league.id }.shuffled()
-        var roundClubs = Array(leagueClubs.prefix(16))
-        if !roundClubs.contains(where: { $0.id == club.id }) {
-            roundClubs[roundClubs.count - 1] = club
-        }
-
-        var matchDate = Calendar.current.date(byAdding: .month, value: 2, to: currentDate)!
-        for i in stride(from: 0, to: roundClubs.count - 1, by: 2) {
-            let home = roundClubs[i]
-            let away = roundClubs[i + 1]
-            let match = Match(
-                homeClubId: home.id, awayClubId: away.id,
-                homeClubName: home.name, awayClubName: away.name,
-                matchType: .nationalCup, date: matchDate
-            )
-            cupFixtures.append(match)
-            matchDate = Calendar.current.date(byAdding: .hour, value: 3, to: matchDate)!
-        }
     }
 
     func simulateMatch(_ match: Match) {

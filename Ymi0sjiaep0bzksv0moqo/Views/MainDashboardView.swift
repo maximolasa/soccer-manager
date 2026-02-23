@@ -176,8 +176,12 @@ struct MainDashboardView: View {
             VStack(spacing: 4) {
                 ForEach(Array(viewModel.upcomingFixtures.prefix(3))) { match in
                     HStack {
+                        Text(matchDateString(match.date))
+                            .font(.system(size: 8))
+                            .foregroundStyle(.white.opacity(0.35))
+                            .frame(width: 50, alignment: .leading)
                         Text(match.matchType.rawValue)
-                            .font(.system(size: 9))
+                            .font(.system(size: 9, weight: .semibold))
                             .foregroundStyle(.blue)
                             .frame(width: 40, alignment: .leading)
                         Text("\(match.homeClubName) vs \(match.awayClubName)")

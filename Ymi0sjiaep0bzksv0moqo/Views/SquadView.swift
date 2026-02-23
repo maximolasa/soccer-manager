@@ -3,10 +3,12 @@ import SwiftUI
 struct SquadView: View {
     @State var viewModel: GameViewModel
     @State private var selectedPosition: PlayerPosition?
-    @State private var sortBy: SortOption = .overall
+    @State private var sortBy: SortOption? = nil
+    @State private var sortDirection: SortDirection = .descending
     @State private var selectedPlayer: Player?
 
     nonisolated enum SortOption: String, CaseIterable, Sendable {
+        case position = "Pos"
         case overall = "OVR"
         case offensive = "OFF"
         case defensive = "DEF"
@@ -14,17 +16,43 @@ struct SquadView: View {
         case age = "Age"
     }
 
+    nonisolated enum SortDirection: Sendable {
+        case descending  // + to -  (high first)
+        case ascending   // - to +  (low first)
+    }
+
+    /// Fixed position order: GK, CB, LB, RB, CDM, CM, CAM, LW, RW, ST
+    static let positionOrder: [PlayerPosition] = [
+        .goalkeeper, .centerBack, .leftBack, .rightBack,
+        .defensiveMidfield, .centralMidfield, .attackingMidfield,
+        .leftWing, .rightWing, .striker
+    ]
+
     var filteredPlayers: [Player] {
         var list = viewModel.myPlayers
         if let pos = selectedPosition {
             list = list.filter { $0.position == pos }
         }
+        guard let sortBy else { return list }
+        let asc = sortDirection == .ascending
         switch sortBy {
-        case .overall: list.sort { $0.stats.overall > $1.stats.overall }
-        case .offensive: list.sort { $0.stats.offensive > $1.stats.offensive }
-        case .defensive: list.sort { $0.stats.defensive > $1.stats.defensive }
-        case .physical: list.sort { $0.stats.physical > $1.stats.physical }
-        case .age: list.sort { $0.age < $1.age }
+        case .position:
+            let order = Self.positionOrder
+            list.sort {
+                let i0 = order.firstIndex(of: $0.position) ?? 99
+                let i1 = order.firstIndex(of: $1.position) ?? 99
+                return asc ? i0 > i1 : i0 < i1
+            }
+        case .overall:
+            list.sort { asc ? $0.stats.overall < $1.stats.overall : $0.stats.overall > $1.stats.overall }
+        case .offensive:
+            list.sort { asc ? $0.stats.offensive < $1.stats.offensive : $0.stats.offensive > $1.stats.offensive }
+        case .defensive:
+            list.sort { asc ? $0.stats.defensive < $1.stats.defensive : $0.stats.defensive > $1.stats.defensive }
+        case .physical:
+            list.sort { asc ? $0.stats.physical < $1.stats.physical : $0.stats.physical > $1.stats.physical }
+        case .age:
+            list.sort { asc ? $0.age > $1.age : $0.age < $1.age }
         }
         return list
     }
@@ -94,8 +122,24 @@ struct SquadView: View {
                     .background(Color.white.opacity(0.2))
 
                 ForEach(SortOption.allCases, id: \.rawValue) { option in
-                    filterChip(option.rawValue, isSelected: sortBy == option, color: .orange) {
-                        sortBy = option
+                    let isActive = sortBy == option
+                    filterChip(
+                        option.rawValue + (isActive ? (sortDirection == .descending ? " ↓" : " ↑") : ""),
+                        isSelected: isActive,
+                        color: .orange
+                    ) {
+                        if sortBy == option {
+                            // Same column tapped: descending → ascending → clear
+                            if sortDirection == .descending {
+                                sortDirection = .ascending
+                            } else {
+                                sortBy = nil
+                                sortDirection = .descending
+                            }
+                        } else {
+                            sortBy = option
+                            sortDirection = .descending
+                        }
                     }
                 }
             }
