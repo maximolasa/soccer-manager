@@ -74,18 +74,15 @@ struct TacticsView: View {
     // MARK: - Body
 
     var body: some View {
-        ZStack {
-            Color(red: 0.06, green: 0.08, blue: 0.12).ignoresSafeArea()
+        VStack(spacing: 0) {
+            // Single unified header
+            unifiedHeader
 
-            VStack(spacing: 0) {
-                // Single unified header
-                unifiedHeader
-
-                // Main content: tactics | pitch | substitutes
-                mainContent
-            }
-            .animation(.spring(duration: 0.25), value: selectedSlot)
+            // Main content: tactics | pitch | substitutes
+            mainContent
         }
+        .animation(.spring(duration: 0.25), value: selectedSlot)
+        .background(Color(red: 0.06, green: 0.08, blue: 0.12).ignoresSafeArea())
         .onAppear { quickPickXI() }
         .onChange(of: viewModel.selectedClub?.formation) { _, _ in
             selectedSlot = nil

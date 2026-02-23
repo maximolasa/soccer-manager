@@ -90,20 +90,17 @@ struct TransferMarketView: View {
     }
 
     var body: some View {
-        ZStack {
-            Color(red: 0.06, green: 0.08, blue: 0.1).ignoresSafeArea()
+        VStack(spacing: 0) {
+            headerBar
+            tabBar
+            filtersRow
+            playerTable
 
-            VStack(spacing: 0) {
-                headerBar
-                tabBar
-                filtersRow
-                playerTable
-
-                if showingOffer, let player = selectedPlayer {
-                    offerPanel(player)
-                }
+            if showingOffer, let player = selectedPlayer {
+                offerPanel(player)
             }
         }
+        .background(Color(red: 0.06, green: 0.08, blue: 0.1).ignoresSafeArea())
     }
 
     private var headerBar: some View {

@@ -64,13 +64,12 @@ struct SquadView: View {
 
     var body: some View {
         ZStack {
-            Color(red: 0.06, green: 0.08, blue: 0.1).ignoresSafeArea()
-
             VStack(spacing: 0) {
                 headerBar
                 filtersBar
                 playerList
             }
+            .background(Color(red: 0.06, green: 0.08, blue: 0.1).ignoresSafeArea())
 
             if let player = selectedPlayer {
                 playerDetailOverlay(player)
