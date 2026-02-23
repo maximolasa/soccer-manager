@@ -27,6 +27,10 @@ class Club: Identifiable {
     var primaryColor: String
     var secondaryColor: String
     var countryEmoji: String
+    var mentality: String
+    var tempo: String
+    var pressing: String
+    var playWidth: String
 
     var playersPerYear: Int { 1 + academyRecruitingLevel }
     var academyBaseQuality: Int { 30 + (academyQualityLevel * 8) }
@@ -92,6 +96,10 @@ class Club: Identifiable {
         self.primaryColor = primaryColor
         self.secondaryColor = secondaryColor
         self.countryEmoji = countryEmoji
+        self.mentality = "Balanced"
+        self.tempo = "Normal"
+        self.pressing = "Medium"
+        self.playWidth = "Normal"
     }
 
     func upgradeAcademy(_ type: AcademyUpgrade) -> Bool {
