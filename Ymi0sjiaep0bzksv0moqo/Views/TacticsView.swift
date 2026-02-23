@@ -65,11 +65,8 @@ struct TacticsView: View {
                 // Tabs + Match Info
                 tabsAndMatchInfo
 
-                // Main content: bench | pitch | substitutes
+                // Main content: tactics | pitch | substitutes
                 mainContent
-
-                // Bottom action bar
-                bottomBar
             }
             .animation(.spring(duration: 0.25), value: selectedSlot)
         }
@@ -112,6 +109,27 @@ struct TacticsView: View {
             }
 
             Spacer()
+
+            // Auto Pick button
+            Button {
+                selectedSlot = nil
+                quickPickXI()
+            } label: {
+                HStack(spacing: 4) {
+                    Image(systemName: "bolt.fill")
+                        .font(.system(size: 9))
+                    Text("Auto Pick")
+                        .font(.system(size: 10, weight: .bold))
+                }
+                .foregroundStyle(.black)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 5)
+                .background(Color.orange)
+                .clipShape(.capsule)
+            }
+            .buttonStyle(.plain)
+
+            Spacer().frame(width: 10)
 
             // Right: Club info
             HStack(spacing: 8) {
@@ -396,10 +414,10 @@ struct TacticsView: View {
             }
         } label: {
             VStack(spacing: 2) {
-                // Position label
+                // Position label above
                 Text(posLabel)
                     .font(.system(size: 7, weight: .heavy))
-                    .foregroundStyle(.white.opacity(0.6))
+                    .foregroundStyle(.white.opacity(0.7))
                     .padding(.horizontal, 6)
                     .padding(.vertical, 2)
                     .background(
@@ -407,7 +425,7 @@ struct TacticsView: View {
                             .fill(posLabel == "GK" ? Color(red: 0.2, green: 0.6, blue: 0.3) : clubColor.opacity(0.85))
                     )
 
-                // Player circle
+                // Player circle with rating inside
                 ZStack {
                     Circle()
                         .fill(
@@ -418,38 +436,25 @@ struct TacticsView: View {
                                 endRadius: 20
                             )
                         )
-                        .frame(width: 34, height: 34)
+                        .frame(width: 36, height: 36)
 
                     if selectedSlot == slotIndex {
                         Circle()
                             .strokeBorder(Color.yellow, lineWidth: 2.5)
-                            .frame(width: 38, height: 38)
+                            .frame(width: 40, height: 40)
                     } else {
                         Circle()
                             .strokeBorder(.white.opacity(0.2), lineWidth: 1)
-                            .frame(width: 34, height: 34)
+                            .frame(width: 36, height: 36)
                     }
+
+                    Text("\(player?.stats.overall ?? 0)")
+                        .font(.system(size: 12, weight: .black, design: .rounded))
+                        .foregroundStyle(.white)
                 }
                 .shadow(color: selectedSlot == slotIndex ? .yellow.opacity(0.4) : .black.opacity(0.5), radius: 4, y: 2)
 
-                // Rating bar
-                ZStack(alignment: .leading) {
-                    RoundedRectangle(cornerRadius: 2)
-                        .fill(Color.black.opacity(0.4))
-                        .frame(width: 34, height: 4)
-
-                    RoundedRectangle(cornerRadius: 2)
-                        .fill(ratingBarColor(player?.stats.overall ?? 0))
-                        .frame(width: 34 * CGFloat(player?.stats.overall ?? 0) / 100.0, height: 4)
-                }
-
-                // Rating number
-                Text("\(player?.stats.overall ?? 0)")
-                    .font(.system(size: 11, weight: .black, design: .rounded))
-                    .foregroundStyle(.white)
-                    .shadow(color: .black.opacity(0.6), radius: 2)
-
-                // Player name
+                // Player name below
                 Text(player?.lastName ?? "---")
                     .font(.system(size: 8, weight: .semibold))
                     .foregroundStyle(.white)
@@ -628,47 +633,33 @@ struct TacticsView: View {
                 swapPlayer(slot: slot, with: player)
             }
         } label: {
-            HStack(spacing: 6) {
+            HStack(spacing: 8) {
                 // Position badge
                 ZStack {
                     Circle()
                         .fill(positionBadgeColor(player.position))
-                        .frame(width: 28, height: 28)
+                        .frame(width: 26, height: 26)
 
                     Text(player.position.rawValue)
                         .font(.system(size: 7, weight: .heavy))
                         .foregroundStyle(.white)
                 }
 
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(player.lastName)
-                        .font(.system(size: 9, weight: .bold))
-                        .foregroundStyle(.white)
-                        .lineLimit(1)
-
-                    // Rating bar
-                    ZStack(alignment: .leading) {
-                        RoundedRectangle(cornerRadius: 1.5)
-                            .fill(Color.white.opacity(0.1))
-                            .frame(height: 3)
-
-                        GeometryReader { barGeo in
-                            RoundedRectangle(cornerRadius: 1.5)
-                                .fill(ratingBarColor(player.stats.overall))
-                                .frame(width: barGeo.size.width * CGFloat(player.stats.overall) / 100.0, height: 3)
-                        }
-                        .frame(height: 3)
-                    }
-                }
+                // Name
+                Text(player.lastName)
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundStyle(.white)
+                    .lineLimit(1)
 
                 Spacer()
 
+                // Rating
                 Text("\(player.stats.overall)")
                     .font(.system(size: 11, weight: .black, design: .rounded))
                     .foregroundStyle(statColor(player.stats.overall))
             }
             .padding(.horizontal, 8)
-            .padding(.vertical, 6)
+            .padding(.vertical, 5)
             .background(
                 RoundedRectangle(cornerRadius: 6)
                     .fill(Color.white.opacity(canSwap ? 0.06 : 0.03))
@@ -677,104 +668,7 @@ struct TacticsView: View {
         .buttonStyle(.plain)
     }
 
-    // MARK: - Bottom Bar
 
-    private var bottomBar: some View {
-        HStack(spacing: 0) {
-            // Reset
-            Button {
-                selectedSlot = nil
-                quickPickXI()
-            } label: {
-                HStack(spacing: 5) {
-                    Image(systemName: "arrow.counterclockwise")
-                        .font(.system(size: 11))
-                    Text("Reset")
-                        .font(.system(size: 11, weight: .bold))
-                }
-                .foregroundStyle(.white.opacity(0.8))
-                .padding(.horizontal, 16)
-                .padding(.vertical, 9)
-                .background(Color.white.opacity(0.08))
-                .clipShape(.rect(cornerRadius: 6))
-            }
-            .buttonStyle(.plain)
-
-            Spacer()
-
-            // Formation display
-            HStack(spacing: 6) {
-                Image(systemName: "rectangle.3.group")
-                    .font(.system(size: 10))
-                    .foregroundStyle(.orange)
-                Text(formation)
-                    .font(.system(size: 12, weight: .bold, design: .monospaced))
-                    .foregroundStyle(.white)
-            }
-
-            Spacer()
-
-            // Rating
-            HStack(spacing: 5) {
-                Image(systemName: "star.fill")
-                    .font(.system(size: 10))
-                    .foregroundStyle(.green)
-                Text(String(format: "%.0f", averageOVR))
-                    .font(.system(size: 12, weight: .bold, design: .monospaced))
-                    .foregroundStyle(.white)
-                Text("AVG")
-                    .font(.system(size: 9, weight: .medium))
-                    .foregroundStyle(.white.opacity(0.4))
-            }
-
-            Spacer()
-
-            // Quick Pick
-            Button {
-                selectedSlot = nil
-                quickPickXI()
-            } label: {
-                HStack(spacing: 5) {
-                    Image(systemName: "bolt.fill")
-                        .font(.system(size: 10))
-                    Text("Auto Pick")
-                        .font(.system(size: 11, weight: .bold))
-                }
-                .foregroundStyle(.black)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 9)
-                .background(Color.orange)
-                .clipShape(.rect(cornerRadius: 6))
-            }
-            .buttonStyle(.plain)
-
-            Spacer()
-
-            // Confirm
-            Button {
-                viewModel.currentScreen = .dashboard
-            } label: {
-                Text("Confirm")
-                    .font(.system(size: 12, weight: .black))
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 9)
-                    .background(
-                        LinearGradient(
-                            colors: [Color(red: 0.18, green: 0.8, blue: 0.44),
-                                     Color(red: 0.15, green: 0.68, blue: 0.38)],
-                            startPoint: .top,
-                            endPoint: .bottom
-                        )
-                    )
-                    .clipShape(.rect(cornerRadius: 6))
-            }
-            .buttonStyle(.plain)
-        }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 8)
-        .background(Color(red: 0.08, green: 0.1, blue: 0.22))
-    }
 
     // MARK: - Swap Logic
 
