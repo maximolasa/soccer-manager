@@ -1,14 +1,14 @@
 //
-//  Ymi0sjiaep0bzksv0moqoTests.swift
-//  Ymi0sjiaep0bzksv0moqoTests
+//  SoccerManagerTests.swift
+//  SoccerManagerTests
 //
 //  Created by Rork on February 21, 2026.
 //
 
 import Testing
-@testable import Ymi0sjiaep0bzksv0moqo
+@testable import SoccerManager
 
-struct Ymi0sjiaep0bzksv0moqoTests {
+struct SoccerManagerTests {
 
     @Test func example() async throws {
         // Write your test here and use APIs like `#expect(...)` to check expected conditions.

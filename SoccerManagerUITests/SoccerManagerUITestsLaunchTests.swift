@@ -1,13 +1,13 @@
 //
-//  Ymi0sjiaep0bzksv0moqoUITestsLaunchTests.swift
-//  Ymi0sjiaep0bzksv0moqoUITests
+//  SoccerManagerUITestsLaunchTests.swift
+//  SoccerManagerUITests
 //
 //  Created by Rork on February 21, 2026.
 //
 
 import XCTest
 
-final class Ymi0sjiaep0bzksv0moqoUITestsLaunchTests: XCTestCase {
+final class SoccerManagerUITestsLaunchTests: XCTestCase {
 
     override class var runsForEachTargetApplicationUIConfiguration: Bool {
         true

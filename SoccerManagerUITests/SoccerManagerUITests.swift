@@ -1,13 +1,13 @@
 //
-//  Ymi0sjiaep0bzksv0moqoUITests.swift
-//  Ymi0sjiaep0bzksv0moqoUITests
+//  SoccerManagerUITests.swift
+//  SoccerManagerUITests
 //
 //  Created by Rork on February 21, 2026.
 //
 
 import XCTest
 
-final class Ymi0sjiaep0bzksv0moqoUITests: XCTestCase {
+final class SoccerManagerUITests: XCTestCase {
 
     override func setUpWithError() throws {
         // Put setup code here. This method is called before the invocation of each test method in the class.
