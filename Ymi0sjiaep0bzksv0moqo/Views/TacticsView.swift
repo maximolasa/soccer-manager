@@ -10,8 +10,7 @@ struct TacticsView: View {
 
     enum TacticsTab: String, CaseIterable {
         case formations = "Formations"
-        case squad = "Squad"
-        case key = "Key"
+        case tactics = "Tactics"
     }
 
     private var formation: String {
@@ -249,7 +248,7 @@ struct TacticsView: View {
 
     private var leftPanel: some View {
         VStack(spacing: 0) {
-            // Stats summary at top
+            // Stats summary at top (always visible)
             VStack(spacing: 6) {
                 statRow(icon: "chart.bar.fill", label: "AVG OVR", value: String(format: "%.0f", averageOVR), color: .orange)
                 statRow(icon: "person.3.fill", label: "Players", value: "\(startingXI.count)/11", color: .green)
@@ -264,91 +263,111 @@ struct TacticsView: View {
 
             Divider().overlay(Color.white.opacity(0.1)).padding(.horizontal, 6)
 
-            // Formations header
-            Text("FORMATIONS")
-                .font(.system(size: 8, weight: .black))
-                .foregroundStyle(.white.opacity(0.4))
-                .tracking(1)
-                .padding(.top, 8)
-                .padding(.bottom, 4)
-
-            ScrollView(.vertical, showsIndicators: false) {
-                VStack(spacing: 4) {
-                    ForEach(formations, id: \.self) { f in
-                        Button {
-                            viewModel.selectedClub?.formation = f
-                        } label: {
-                            Text(f)
-                                .font(.system(size: 10, weight: .bold, design: .monospaced))
-                                .foregroundStyle(formation == f ? .black : .white.opacity(0.5))
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 5)
-                                .background(formation == f ? Color.orange : Color.white.opacity(0.06))
-                                .clipShape(.rect(cornerRadius: 4))
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
-                .padding(.horizontal, 8)
-                .padding(.bottom, 8)
-            }
-
-            Divider().overlay(Color.white.opacity(0.1)).padding(.horizontal, 6)
-
-            // Tactics instructions
-            ScrollView(.vertical, showsIndicators: false) {
-                VStack(spacing: 8) {
-                    compactInstructionRow("MENTALITY", options: ["DEF", "BAL", "ATK"],
-                                          fullOptions: ["Defensive", "Balanced", "Attacking"],
-                                          value: viewModel.selectedClub?.mentality ?? "Balanced") {
-                        viewModel.selectedClub?.mentality = $0
-                    }
-
-                    compactInstructionRow("TEMPO", options: ["SLW", "NRM", "FST"],
-                                          fullOptions: ["Slow", "Normal", "Fast"],
-                                          value: viewModel.selectedClub?.tempo ?? "Normal") {
-                        viewModel.selectedClub?.tempo = $0
-                    }
-
-                    compactInstructionRow("PRESSING", options: ["LOW", "MED", "HGH"],
-                                          fullOptions: ["Low", "Medium", "High"],
-                                          value: viewModel.selectedClub?.pressing ?? "Medium") {
-                        viewModel.selectedClub?.pressing = $0
-                    }
-
-                    compactInstructionRow("WIDTH", options: ["NRW", "NRM", "WDE"],
-                                          fullOptions: ["Narrow", "Normal", "Wide"],
-                                          value: viewModel.selectedClub?.playWidth ?? "Normal") {
-                        viewModel.selectedClub?.playWidth = $0
-                    }
-                }
-                .padding(.horizontal, 8)
-                .padding(.vertical, 6)
+            // Tab content
+            if selectedTab == .formations {
+                formationsTabContent
+            } else {
+                tacticsTabContent
             }
         }
         .background(Color(red: 0.06, green: 0.07, blue: 0.14).opacity(0.9))
     }
 
-    private func compactInstructionRow(_ label: String, options: [String], fullOptions: [String],
-                                        value: String, onChange: @escaping (String) -> Void) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(label)
-                .font(.system(size: 7, weight: .bold))
-                .foregroundStyle(.white.opacity(0.35))
-                .tracking(0.5)
+    // MARK: - Formations Tab
 
-            VStack(spacing: 2) {
-                ForEach(Array(zip(options.indices, options)), id: \.0) { idx, short in
-                    let full = idx < fullOptions.count ? fullOptions[idx] : short
+    private var formationsTabContent: some View {
+        ScrollView(.vertical, showsIndicators: false) {
+            VStack(spacing: 4) {
+                ForEach(formations, id: \.self) { f in
+                    Button {
+                        viewModel.selectedClub?.formation = f
+                    } label: {
+                        Text(f)
+                            .font(.system(size: 10, weight: .bold, design: .monospaced))
+                            .foregroundStyle(formation == f ? .black : .white.opacity(0.5))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 5)
+                            .background(formation == f ? Color.orange : Color.white.opacity(0.06))
+                            .clipShape(.rect(cornerRadius: 4))
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal, 8)
+            .padding(.top, 8)
+            .padding(.bottom, 8)
+        }
+    }
+
+    // MARK: - Tactics Tab
+
+    private var tacticsTabContent: some View {
+        ScrollView(.vertical, showsIndicators: false) {
+            VStack(spacing: 12) {
+                tacticsOptionRow("MENTALITY",
+                                 icon: "flame.fill",
+                                 options: ["Defensive", "Balanced", "Attacking"],
+                                 shorts: ["DEF", "BAL", "ATK"],
+                                 value: viewModel.selectedClub?.mentality ?? "Balanced") {
+                    viewModel.selectedClub?.mentality = $0
+                }
+
+                tacticsOptionRow("TEMPO",
+                                 icon: "gauge.open.with.lines.needle.33percent",
+                                 options: ["Slow", "Normal", "Fast"],
+                                 shorts: ["SLW", "NRM", "FST"],
+                                 value: viewModel.selectedClub?.tempo ?? "Normal") {
+                    viewModel.selectedClub?.tempo = $0
+                }
+
+                tacticsOptionRow("PRESSING",
+                                 icon: "arrow.up.forward.circle.fill",
+                                 options: ["Low", "Medium", "High"],
+                                 shorts: ["LOW", "MED", "HGH"],
+                                 value: viewModel.selectedClub?.pressing ?? "Medium") {
+                    viewModel.selectedClub?.pressing = $0
+                }
+
+                tacticsOptionRow("WIDTH",
+                                 icon: "arrow.left.and.right",
+                                 options: ["Narrow", "Normal", "Wide"],
+                                 shorts: ["NRW", "NRM", "WDE"],
+                                 value: viewModel.selectedClub?.playWidth ?? "Normal") {
+                    viewModel.selectedClub?.playWidth = $0
+                }
+            }
+            .padding(.horizontal, 8)
+            .padding(.top, 10)
+            .padding(.bottom, 8)
+        }
+    }
+
+    private func tacticsOptionRow(_ label: String, icon: String, options: [String],
+                                   shorts: [String], value: String,
+                                   onChange: @escaping (String) -> Void) -> some View {
+        VStack(alignment: .leading, spacing: 5) {
+            HStack(spacing: 4) {
+                Image(systemName: icon)
+                    .font(.system(size: 7))
+                    .foregroundStyle(.orange)
+                Text(label)
+                    .font(.system(size: 7, weight: .black))
+                    .foregroundStyle(.white.opacity(0.4))
+                    .tracking(0.5)
+            }
+
+            HStack(spacing: 3) {
+                ForEach(Array(zip(shorts.indices, shorts)), id: \.0) { idx, short in
+                    let full = idx < options.count ? options[idx] : short
                     let isSelected = value == full
                     Button { onChange(full) } label: {
                         Text(short)
                             .font(.system(size: 8, weight: .bold))
                             .foregroundStyle(isSelected ? .black : .white.opacity(0.5))
                             .frame(maxWidth: .infinity)
-                            .padding(.vertical, 4)
+                            .padding(.vertical, 5)
                             .background(isSelected ? Color.orange : Color.white.opacity(0.06))
-                            .clipShape(.rect(cornerRadius: 3))
+                            .clipShape(.rect(cornerRadius: 4))
                     }
                     .buttonStyle(.plain)
                 }
