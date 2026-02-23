@@ -4,8 +4,15 @@ struct TacticsView: View {
     @State var viewModel: GameViewModel
     @State private var startingXI: [Player] = []
     @State private var selectedSlot: Int?
+    @State private var selectedTab: TacticsTab = .formations
 
     private let formations = ["4-4-2", "4-3-3", "3-5-2", "4-2-3-1", "4-1-4-1", "3-4-3", "5-3-2", "4-5-1"]
+
+    enum TacticsTab: String, CaseIterable {
+        case formations = "Formations"
+        case squad = "Squad"
+        case key = "Key"
+    }
 
     private var formation: String {
         viewModel.selectedClub?.formation ?? "4-4-2"
@@ -14,6 +21,13 @@ struct TacticsView: View {
     private var averageOVR: Double {
         guard !startingXI.isEmpty else { return 0 }
         return Double(startingXI.reduce(0) { $0 + $1.stats.overall }) / Double(startingXI.count)
+    }
+
+    private var benchPlayers: [Player] {
+        let xiIds = Set(startingXI.map(\.id))
+        return viewModel.myPlayers
+            .filter { !xiIds.contains($0.id) && !$0.isInjured }
+            .sorted { $0.stats.overall > $1.stats.overall }
     }
 
     private var benchForSelectedSlot: [Player] {
@@ -42,18 +56,20 @@ struct TacticsView: View {
 
     var body: some View {
         ZStack {
-            Color(red: 0.06, green: 0.08, blue: 0.1).ignoresSafeArea()
+            Color(red: 0.06, green: 0.08, blue: 0.12).ignoresSafeArea()
 
             VStack(spacing: 0) {
+                // Top header
                 headerBar
-                formationStrip
-                pitchSection
-                infoStrip
-                if selectedSlot != nil {
-                    swapPanel
-                } else {
-                    instructionsPanel
-                }
+
+                // Tabs + Match Info
+                tabsAndMatchInfo
+
+                // Main content: bench | pitch | substitutes
+                mainContent
+
+                // Bottom action bar
+                bottomBar
             }
             .animation(.spring(duration: 0.25), value: selectedSlot)
         }
@@ -64,80 +80,253 @@ struct TacticsView: View {
         }
     }
 
-    // MARK: - Header
+    // MARK: - Header Bar
 
     private var headerBar: some View {
-        HStack {
+        HStack(spacing: 0) {
+            // Left: Back + title
             Button {
                 viewModel.currentScreen = .dashboard
             } label: {
                 HStack(spacing: 4) {
                     Image(systemName: "chevron.left")
+                        .font(.system(size: 12, weight: .semibold))
                     Text("Back")
+                        .font(.system(size: 12))
                 }
-                .font(.caption)
-                .foregroundStyle(.green)
-            }
-
-            Spacer()
-
-            Text("TACTICS")
-                .font(.headline)
-                .fontWeight(.black)
-                .foregroundStyle(.white)
-                .tracking(2)
-
-            Spacer()
-
-            Button {
-                selectedSlot = nil
-                quickPickXI()
-            } label: {
-                HStack(spacing: 4) {
-                    Image(systemName: "bolt.fill")
-                    Text("Quick Pick")
-                }
-                .font(.system(size: 11, weight: .bold))
-                .foregroundStyle(.black)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 5)
-                .background(Color.orange)
-                .clipShape(.capsule)
+                .foregroundStyle(.white.opacity(0.7))
             }
             .buttonStyle(.plain)
+
+            Spacer()
+
+            // Center: Title
+            VStack(spacing: 1) {
+                Text("TEAM MANAGEMENT")
+                    .font(.system(size: 14, weight: .black))
+                    .foregroundStyle(.white)
+                    .tracking(1.5)
+                Text("Formation")
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.5))
+            }
+
+            Spacer()
+
+            // Right: Club info
+            HStack(spacing: 8) {
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text(viewModel.selectedClub?.name ?? "Club")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(.white)
+                    Text(viewModel.currentLeagueStandings.isEmpty ? "" :
+                            ordinalPosition(viewModel.currentLeagueStandings))
+                        .font(.system(size: 9))
+                        .foregroundStyle(.white.opacity(0.5))
+                }
+
+                Image(systemName: "shield.fill")
+                    .font(.system(size: 22))
+                    .foregroundStyle(viewModel.selectedClub?.primarySwiftUIColor ?? .blue)
+            }
         }
         .padding(.horizontal, 16)
-        .padding(.vertical, 8)
-        .background(Color(white: 0.1))
+        .padding(.vertical, 10)
+        .background(
+            LinearGradient(
+                colors: [Color(red: 0.35, green: 0.1, blue: 0.18), Color(red: 0.22, green: 0.07, blue: 0.13)],
+                startPoint: .leading,
+                endPoint: .trailing
+            )
+        )
     }
 
-    // MARK: - Formation Strip
+    private func ordinalPosition(_ standings: [StandingsEntry]) -> String {
+        guard let clubId = viewModel.selectedClubId,
+              let idx = standings.firstIndex(where: { $0.clubId == clubId }) else { return "" }
+        let pos = idx + 1
+        let suffix: String
+        switch pos {
+        case 1: suffix = "st"
+        case 2: suffix = "nd"
+        case 3: suffix = "rd"
+        default: suffix = "th"
+        }
+        return "\(pos)\(suffix) in League"
+    }
 
-    private var formationStrip: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 6) {
-                ForEach(formations, id: \.self) { f in
+    // MARK: - Tabs + Match Info
+
+    private var tabsAndMatchInfo: some View {
+        HStack(spacing: 0) {
+            // Tabs
+            HStack(spacing: 2) {
+                ForEach(TacticsTab.allCases, id: \.self) { tab in
                     Button {
-                        viewModel.selectedClub?.formation = f
+                        selectedTab = tab
                     } label: {
-                        Text(f)
-                            .font(.system(size: 11, weight: .bold, design: .monospaced))
-                            .foregroundStyle(formation == f ? .black : .white.opacity(0.5))
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 6)
-                            .background(formation == f ? Color.orange : Color.white.opacity(0.06))
-                            .clipShape(.capsule)
+                        Text(tab.rawValue)
+                            .font(.system(size: 11, weight: selectedTab == tab ? .bold : .medium))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 7)
+                            .background(
+                                selectedTab == tab
+                                    ? Color.white.opacity(0.12)
+                                    : Color.clear
+                            )
+                            .clipShape(.rect(cornerRadius: 5))
                     }
                     .buttonStyle(.plain)
                 }
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
+
+            Spacer()
+
+            // Next match info
+            if let match = viewModel.nextMatch {
+                let opponent = opponentName(for: match)
+                let isHome = match.homeClubId == viewModel.selectedClubId
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text("VS: \(opponent)(\(isHome ? "H" : "A")) \(match.type)")
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundStyle(.white.opacity(0.85))
+                    Text("Their Formation: \(formation) (ATK)")
+                        .font(.system(size: 9))
+                        .foregroundStyle(.white.opacity(0.5))
+                }
+            }
         }
-        .background(Color(white: 0.07))
+        .padding(.horizontal, 14)
+        .padding(.vertical, 8)
+        .background(Color(red: 0.08, green: 0.1, blue: 0.22))
     }
 
-    // MARK: - Pitch
+    private func opponentName(for match: Match) -> String {
+        let oppId = match.homeClubId == viewModel.selectedClubId ? match.awayClubId : match.homeClubId
+        return viewModel.clubs.first(where: { $0.id == oppId })?.name ?? "Opponent"
+    }
+
+    // MARK: - Main Content
+
+    private var mainContent: some View {
+        GeometryReader { geo in
+            HStack(spacing: 0) {
+                // Left: Instructions / Settings panel
+                leftPanel
+                    .frame(width: geo.size.width * 0.18)
+
+                // Center: Football pitch
+                pitchSection
+                    .frame(width: geo.size.width * 0.58)
+
+                // Right: Substitutes
+                rightPanel
+                    .frame(width: geo.size.width * 0.24)
+            }
+        }
+    }
+
+    // MARK: - Left Panel (Tactics Settings)
+
+    private var leftPanel: some View {
+        VStack(spacing: 0) {
+            // Panel header
+            Text("TACTICS")
+                .font(.system(size: 9, weight: .black))
+                .foregroundStyle(.white.opacity(0.4))
+                .tracking(1)
+                .padding(.top, 10)
+                .padding(.bottom, 6)
+
+            ScrollView(.vertical, showsIndicators: false) {
+                VStack(spacing: 10) {
+                    compactInstructionRow("MENTALITY", options: ["DEF", "BAL", "ATK"],
+                                          fullOptions: ["Defensive", "Balanced", "Attacking"],
+                                          value: viewModel.selectedClub?.mentality ?? "Balanced") {
+                        viewModel.selectedClub?.mentality = $0
+                    }
+
+                    compactInstructionRow("TEMPO", options: ["SLW", "NRM", "FST"],
+                                          fullOptions: ["Slow", "Normal", "Fast"],
+                                          value: viewModel.selectedClub?.tempo ?? "Normal") {
+                        viewModel.selectedClub?.tempo = $0
+                    }
+
+                    compactInstructionRow("PRESSING", options: ["LOW", "MED", "HGH"],
+                                          fullOptions: ["Low", "Medium", "High"],
+                                          value: viewModel.selectedClub?.pressing ?? "Medium") {
+                        viewModel.selectedClub?.pressing = $0
+                    }
+
+                    compactInstructionRow("WIDTH", options: ["NRW", "NRM", "WDE"],
+                                          fullOptions: ["Narrow", "Normal", "Wide"],
+                                          value: viewModel.selectedClub?.playWidth ?? "Normal") {
+                        viewModel.selectedClub?.playWidth = $0
+                    }
+
+                    // Stats summary
+                    Divider().overlay(Color.white.opacity(0.1))
+
+                    VStack(spacing: 6) {
+                        statRow(icon: "chart.bar.fill", label: "AVG OVR", value: String(format: "%.0f", averageOVR), color: .orange)
+                        statRow(icon: "person.3.fill", label: "Players", value: "\(startingXI.count)/11", color: .green)
+                        statRow(icon: "heart.fill", label: "Morale",
+                                value: startingXI.isEmpty ? "--" :
+                                    "\(startingXI.reduce(0) { $0 + $1.morale } / max(1, startingXI.count))",
+                                color: .pink)
+                    }
+                }
+                .padding(.horizontal, 8)
+                .padding(.bottom, 12)
+            }
+        }
+        .background(Color(red: 0.06, green: 0.07, blue: 0.14).opacity(0.9))
+    }
+
+    private func compactInstructionRow(_ label: String, options: [String], fullOptions: [String],
+                                        value: String, onChange: @escaping (String) -> Void) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(label)
+                .font(.system(size: 7, weight: .bold))
+                .foregroundStyle(.white.opacity(0.35))
+                .tracking(0.5)
+
+            VStack(spacing: 2) {
+                ForEach(Array(zip(options.indices, options)), id: \.0) { idx, short in
+                    let full = idx < fullOptions.count ? fullOptions[idx] : short
+                    let isSelected = value == full
+                    Button { onChange(full) } label: {
+                        Text(short)
+                            .font(.system(size: 8, weight: .bold))
+                            .foregroundStyle(isSelected ? .black : .white.opacity(0.5))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 4)
+                            .background(isSelected ? Color.orange : Color.white.opacity(0.06))
+                            .clipShape(.rect(cornerRadius: 3))
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+    }
+
+    private func statRow(icon: String, label: String, value: String, color: Color) -> some View {
+        HStack(spacing: 4) {
+            Image(systemName: icon)
+                .font(.system(size: 7))
+                .foregroundStyle(color)
+            Text(label)
+                .font(.system(size: 7, weight: .medium))
+                .foregroundStyle(.white.opacity(0.4))
+            Spacer()
+            Text(value)
+                .font(.system(size: 9, weight: .bold, design: .monospaced))
+                .foregroundStyle(.white)
+        }
+    }
+
+    // MARK: - Pitch Section
 
     private var pitchSection: some View {
         GeometryReader { geo in
@@ -149,20 +338,7 @@ struct TacticsView: View {
 
             ZStack {
                 // Pitch background
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(Color(red: 0.1, green: 0.35, blue: 0.1))
-
-                // Grass stripes
-                VStack(spacing: 0) {
-                    ForEach(0..<10, id: \.self) { i in
-                        Rectangle()
-                            .fill(i % 2 == 0 ? Color.white.opacity(0.025) : .clear)
-                    }
-                }
-                .clipShape(.rect(cornerRadius: 12))
-
-                // Field markings
-                pitchMarkings(w: w, h: h)
+                pitchBackground(in: geo.size)
 
                 // Player nodes
                 ForEach(Array(coords.enumerated()), id: \.offset) { idx, pos in
@@ -178,48 +354,107 @@ struct TacticsView: View {
                 }
             }
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 4)
-        .clipShape(.rect(cornerRadius: 12))
+        .padding(.vertical, 6)
+        .padding(.horizontal, 4)
+        .clipShape(.rect(cornerRadius: 10))
     }
 
-    private func playerNode(player: Player?, slotIndex: Int, posLabel: String, clubColor: Color, position: CGPoint) -> some View {
+    private func pitchBackground(in size: CGSize) -> some View {
+        ZStack {
+            // Base field color
+            RoundedRectangle(cornerRadius: 10)
+                .fill(
+                    LinearGradient(
+                        colors: [Color(red: 0.08, green: 0.28, blue: 0.15),
+                                 Color(red: 0.05, green: 0.2, blue: 0.1),
+                                 Color(red: 0.08, green: 0.28, blue: 0.15)],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                )
+
+            // Grass stripes
+            VStack(spacing: 0) {
+                ForEach(0..<12, id: \.self) { i in
+                    Rectangle()
+                        .fill(i % 2 == 0 ? Color.white.opacity(0.02) : Color.clear)
+                        .frame(height: size.height / 12)
+                }
+            }
+            .clipShape(.rect(cornerRadius: 10))
+
+            // Field markings
+            pitchMarkings(w: size.width, h: size.height)
+        }
+    }
+
+    private func playerNode(player: Player?, slotIndex: Int, posLabel: String,
+                             clubColor: Color, position: CGPoint) -> some View {
         Button {
             withAnimation(.spring(duration: 0.2)) {
                 selectedSlot = selectedSlot == slotIndex ? nil : slotIndex
             }
         } label: {
-            VStack(spacing: 1) {
+            VStack(spacing: 2) {
+                // Position label
                 Text(posLabel)
-                    .font(.system(size: 6, weight: .bold))
-                    .foregroundStyle(.white.opacity(0.5))
+                    .font(.system(size: 7, weight: .heavy))
+                    .foregroundStyle(.white.opacity(0.6))
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(
+                        Capsule()
+                            .fill(posLabel == "GK" ? Color(red: 0.2, green: 0.6, blue: 0.3) : clubColor.opacity(0.85))
+                    )
 
+                // Player circle
                 ZStack {
                     Circle()
-                        .fill(clubColor.gradient)
-                        .frame(width: 28, height: 28)
+                        .fill(
+                            RadialGradient(
+                                colors: [clubColor, clubColor.opacity(0.7)],
+                                center: .center,
+                                startRadius: 0,
+                                endRadius: 20
+                            )
+                        )
+                        .frame(width: 34, height: 34)
 
                     if selectedSlot == slotIndex {
                         Circle()
-                            .strokeBorder(.orange, lineWidth: 2)
-                            .frame(width: 32, height: 32)
+                            .strokeBorder(Color.yellow, lineWidth: 2.5)
+                            .frame(width: 38, height: 38)
                     } else {
                         Circle()
-                            .strokeBorder(.white.opacity(0.25), lineWidth: 1)
-                            .frame(width: 28, height: 28)
+                            .strokeBorder(.white.opacity(0.2), lineWidth: 1)
+                            .frame(width: 34, height: 34)
                     }
-
-                    Text("\(player?.stats.overall ?? 0)")
-                        .font(.system(size: 10, weight: .black, design: .rounded))
-                        .foregroundStyle(.white)
                 }
-                .shadow(color: .black.opacity(0.4), radius: 3, y: 2)
+                .shadow(color: selectedSlot == slotIndex ? .yellow.opacity(0.4) : .black.opacity(0.5), radius: 4, y: 2)
 
+                // Rating bar
+                ZStack(alignment: .leading) {
+                    RoundedRectangle(cornerRadius: 2)
+                        .fill(Color.black.opacity(0.4))
+                        .frame(width: 34, height: 4)
+
+                    RoundedRectangle(cornerRadius: 2)
+                        .fill(ratingBarColor(player?.stats.overall ?? 0))
+                        .frame(width: 34 * CGFloat(player?.stats.overall ?? 0) / 100.0, height: 4)
+                }
+
+                // Rating number
+                Text("\(player?.stats.overall ?? 0)")
+                    .font(.system(size: 11, weight: .black, design: .rounded))
+                    .foregroundStyle(.white)
+                    .shadow(color: .black.opacity(0.6), radius: 2)
+
+                // Player name
                 Text(player?.lastName ?? "---")
-                    .font(.system(size: 7, weight: .semibold))
+                    .font(.system(size: 8, weight: .semibold))
                     .foregroundStyle(.white)
                     .lineLimit(1)
-                    .shadow(color: .black.opacity(0.6), radius: 2)
+                    .shadow(color: .black.opacity(0.5), radius: 2)
             }
         }
         .buttonStyle(.plain)
@@ -228,9 +463,9 @@ struct TacticsView: View {
 
     private func pitchMarkings(w: CGFloat, h: CGFloat) -> some View {
         Canvas { context, _ in
-            let lc = Color.white.opacity(0.18)
+            let lc = Color.white.opacity(0.2)
             let lw: CGFloat = 1
-            let m: CGFloat = 12
+            let m: CGFloat = 10
             let fw = w - m * 2
             let fh = h - m * 2
 
@@ -250,7 +485,7 @@ struct TacticsView: View {
             )
 
             // Center circle
-            let cr = min(fw, fh) * 0.12
+            let cr = min(fw, fh) * 0.11
             context.stroke(
                 Path { p in
                     p.addEllipse(in: CGRect(x: w / 2 - cr, y: h / 2 - cr, width: cr * 2, height: cr * 2))
@@ -260,21 +495,21 @@ struct TacticsView: View {
 
             // Center dot
             context.fill(
-                Path { p in p.addEllipse(in: CGRect(x: w / 2 - 2, y: h / 2 - 2, width: 4, height: 4)) },
+                Path { p in p.addEllipse(in: CGRect(x: w / 2 - 3, y: h / 2 - 3, width: 6, height: 6)) },
                 with: .color(lc)
             )
 
             // Penalty area top (attacking)
             let penW = fw * 0.52
-            let penH = fh * 0.14
+            let penH = fh * 0.15
             context.stroke(
                 Path { p in p.addRect(CGRect(x: (w - penW) / 2, y: m, width: penW, height: penH)) },
                 with: .color(lc), lineWidth: lw
             )
 
-            // Goal area top
-            let goalW = fw * 0.22
-            let goalH = fh * 0.05
+            // 6-yard box top
+            let goalW = fw * 0.24
+            let goalH = fh * 0.06
             context.stroke(
                 Path { p in p.addRect(CGRect(x: (w - goalW) / 2, y: m, width: goalW, height: goalH)) },
                 with: .color(lc), lineWidth: lw
@@ -286,204 +521,262 @@ struct TacticsView: View {
                 with: .color(lc), lineWidth: lw
             )
 
-            // Goal area bottom
+            // 6-yard box bottom
             context.stroke(
                 Path { p in p.addRect(CGRect(x: (w - goalW) / 2, y: h - m - goalH, width: goalW, height: goalH)) },
+                with: .color(lc), lineWidth: lw
+            )
+
+            // Penalty arcs
+            let arcRadius = fh * 0.06
+            // Top arc
+            context.stroke(
+                Path { p in
+                    p.addArc(center: CGPoint(x: w / 2, y: m + penH),
+                             radius: arcRadius, startAngle: .degrees(0), endAngle: .degrees(180), clockwise: true)
+                },
+                with: .color(lc), lineWidth: lw
+            )
+            // Bottom arc
+            context.stroke(
+                Path { p in
+                    p.addArc(center: CGPoint(x: w / 2, y: h - m - penH),
+                             radius: arcRadius, startAngle: .degrees(0), endAngle: .degrees(180), clockwise: false)
+                },
                 with: .color(lc), lineWidth: lw
             )
         }
         .drawingGroup()
     }
 
-    // MARK: - Info Strip
+    // MARK: - Right Panel (Substitutes)
 
-    private var infoStrip: some View {
-        HStack(spacing: 0) {
-            infoChip(icon: "chart.bar.fill", color: .orange, label: "AVG", value: String(format: "%.1f", averageOVR))
-            vertDivider
-            infoChip(icon: "person.3.fill", color: .green, label: "XI", value: "\(startingXI.count)/11")
-            vertDivider
-            infoChip(icon: "rectangle.3.group", color: .orange, label: "FRM", value: formation)
-            vertDivider
-            infoChip(icon: "heart.fill", color: .pink, label: "MOR",
-                     value: startingXI.isEmpty ? "--" :
-                        "\(startingXI.reduce(0) { $0 + $1.morale } / max(1, startingXI.count))")
-            Spacer()
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 5)
-        .background(Color(white: 0.08))
-    }
-
-    private func infoChip(icon: String, color: Color, label: String, value: String) -> some View {
-        HStack(spacing: 4) {
-            Image(systemName: icon)
-                .font(.system(size: 8))
-                .foregroundStyle(color)
-            Text(label)
-                .font(.system(size: 8, weight: .medium))
+    private var rightPanel: some View {
+        VStack(spacing: 0) {
+            Text("SUBSTITUTES")
+                .font(.system(size: 9, weight: .black))
                 .foregroundStyle(.white.opacity(0.4))
-            Text(value)
-                .font(.system(size: 10, weight: .bold, design: .monospaced))
-                .foregroundStyle(.white)
-        }
-        .padding(.horizontal, 8)
-    }
+                .tracking(1)
+                .padding(.top, 10)
+                .padding(.bottom, 8)
 
-    private var vertDivider: some View {
-        Rectangle()
-            .fill(.white.opacity(0.1))
-            .frame(width: 1, height: 14)
-    }
+            if selectedSlot != nil {
+                // Show sorted bench for swapping
+                selectedSlotHeader
+                    .padding(.horizontal, 8)
+                    .padding(.bottom, 6)
 
-    // MARK: - Instructions Panel
-
-    private var instructionsPanel: some View {
-        VStack(spacing: 6) {
-            HStack(spacing: 12) {
-                instructionRow("MENTALITY", options: ["Defensive", "Balanced", "Attacking"],
-                               value: viewModel.selectedClub?.mentality ?? "Balanced") {
-                    viewModel.selectedClub?.mentality = $0
-                }
-
-                instructionRow("TEMPO", options: ["Slow", "Normal", "Fast"],
-                               value: viewModel.selectedClub?.tempo ?? "Normal") {
-                    viewModel.selectedClub?.tempo = $0
-                }
-            }
-
-            HStack(spacing: 12) {
-                instructionRow("PRESSING", options: ["Low", "Medium", "High"],
-                               value: viewModel.selectedClub?.pressing ?? "Medium") {
-                    viewModel.selectedClub?.pressing = $0
-                }
-
-                instructionRow("WIDTH", options: ["Narrow", "Normal", "Wide"],
-                               value: viewModel.selectedClub?.playWidth ?? "Normal") {
-                    viewModel.selectedClub?.playWidth = $0
-                }
-            }
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .background(Color(white: 0.07))
-    }
-
-    private func instructionRow(_ label: String, options: [String], value: String,
-                                onChange: @escaping (String) -> Void) -> some View {
-        VStack(alignment: .leading, spacing: 3) {
-            Text(label)
-                .font(.system(size: 8, weight: .bold))
-                .foregroundStyle(.white.opacity(0.35))
-                .tracking(0.5)
-
-            HStack(spacing: 2) {
-                ForEach(options, id: \.self) { option in
-                    let selected = value == option
-                    Button { onChange(option) } label: {
-                        Text(shortLabel(option))
-                            .font(.system(size: 9, weight: .semibold))
-                            .foregroundStyle(selected ? .black : .white.opacity(0.45))
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 4)
-                            .background(selected ? Color.orange : Color.white.opacity(0.06))
-                            .clipShape(.rect(cornerRadius: 4))
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-        }
-    }
-
-    private func shortLabel(_ full: String) -> String {
-        switch full {
-        case "Defensive": return "DEF"
-        case "Balanced": return "BAL"
-        case "Attacking": return "ATK"
-        case "Slow": return "SLW"
-        case "Normal": return "NRM"
-        case "Fast": return "FST"
-        case "Low": return "LOW"
-        case "Medium": return "MED"
-        case "High": return "HGH"
-        case "Narrow": return "NRW"
-        case "Wide": return "WDE"
-        default: return String(full.prefix(3)).uppercased()
-        }
-    }
-
-    // MARK: - Swap Panel
-
-    private var swapPanel: some View {
-        VStack(spacing: 6) {
-            HStack {
-                if let slot = selectedSlot, slot < startingXI.count {
-                    let player = startingXI[slot]
-                    let posSlots = formationSlots(formation: formation)
-                    let posLabel = slot < posSlots.count ? posSlots[slot].rawValue : ""
-
-                    HStack(spacing: 6) {
-                        Text("REPLACE")
-                            .font(.system(size: 9, weight: .bold))
-                            .foregroundStyle(.white.opacity(0.4))
-                        Text(player.lastName)
-                            .font(.system(size: 11, weight: .bold))
-                            .foregroundStyle(.white)
-                        Text("(\(posLabel) · \(player.stats.overall))")
-                            .font(.system(size: 10, weight: .medium))
-                            .foregroundStyle(.orange)
-                    }
-                }
-                Spacer()
-                Button {
-                    withAnimation(.spring(duration: 0.2)) { selectedSlot = nil }
-                } label: {
-                    Image(systemName: "xmark.circle.fill")
-                        .font(.system(size: 16))
-                        .foregroundStyle(.white.opacity(0.4))
-                }
-                .buttonStyle(.plain)
-            }
-
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 6) {
-                    ForEach(benchForSelectedSlot) { player in
-                        Button {
-                            if let slot = selectedSlot {
-                                swapPlayer(slot: slot, with: player)
-                            }
-                        } label: {
-                            VStack(spacing: 2) {
-                                ZStack {
-                                    Circle()
-                                        .fill(Color.white.opacity(0.1))
-                                        .frame(width: 32, height: 32)
-                                    Text("\(player.stats.overall)")
-                                        .font(.system(size: 11, weight: .black, design: .rounded))
-                                        .foregroundStyle(statColor(player.stats.overall))
-                                }
-                                Text(player.lastName)
-                                    .font(.system(size: 8, weight: .medium))
-                                    .foregroundStyle(.white.opacity(0.8))
-                                    .lineLimit(1)
-                                Text(player.position.rawValue)
-                                    .font(.system(size: 7, weight: .bold))
-                                    .foregroundStyle(.cyan)
-                            }
-                            .frame(width: 54)
-                            .padding(.vertical, 4)
-                            .background(Color.white.opacity(0.05))
-                            .clipShape(.rect(cornerRadius: 8))
+                ScrollView(.vertical, showsIndicators: false) {
+                    LazyVStack(spacing: 6) {
+                        ForEach(benchForSelectedSlot) { player in
+                            substituteCard(player, canSwap: true)
                         }
-                        .buttonStyle(.plain)
                     }
+                    .padding(.horizontal, 6)
+                    .padding(.bottom, 10)
+                }
+            } else {
+                // Just show bench
+                ScrollView(.vertical, showsIndicators: false) {
+                    LazyVStack(spacing: 6) {
+                        ForEach(benchPlayers.prefix(9)) { player in
+                            substituteCard(player, canSwap: false)
+                        }
+                    }
+                    .padding(.horizontal, 6)
+                    .padding(.bottom, 10)
                 }
             }
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .background(Color(white: 0.1))
+        .background(Color(red: 0.06, green: 0.07, blue: 0.14).opacity(0.9))
     }
+
+    private var selectedSlotHeader: some View {
+        Group {
+            if let slot = selectedSlot, slot < startingXI.count {
+                let player = startingXI[slot]
+                let posSlots = formationSlots(formation: formation)
+                let posLabel = slot < posSlots.count ? posSlots[slot].rawValue : ""
+
+                VStack(spacing: 2) {
+                    HStack(spacing: 4) {
+                        Text("SWAP")
+                            .font(.system(size: 7, weight: .black))
+                            .foregroundStyle(.orange)
+                        Text(player.lastName)
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundStyle(.white)
+                    }
+                    Text("\(posLabel) · \(player.stats.overall)")
+                        .font(.system(size: 8, weight: .medium))
+                        .foregroundStyle(.white.opacity(0.5))
+                }
+                .padding(.vertical, 5)
+                .frame(maxWidth: .infinity)
+                .background(Color.orange.opacity(0.1))
+                .clipShape(.rect(cornerRadius: 5))
+                .onTapGesture {
+                    withAnimation(.spring(duration: 0.2)) { selectedSlot = nil }
+                }
+            }
+        }
+    }
+
+    private func substituteCard(_ player: Player, canSwap: Bool) -> some View {
+        Button {
+            if canSwap, let slot = selectedSlot {
+                swapPlayer(slot: slot, with: player)
+            }
+        } label: {
+            HStack(spacing: 6) {
+                // Position badge
+                ZStack {
+                    Circle()
+                        .fill(positionBadgeColor(player.position))
+                        .frame(width: 28, height: 28)
+
+                    Text(player.position.rawValue)
+                        .font(.system(size: 7, weight: .heavy))
+                        .foregroundStyle(.white)
+                }
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(player.lastName)
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundStyle(.white)
+                        .lineLimit(1)
+
+                    // Rating bar
+                    ZStack(alignment: .leading) {
+                        RoundedRectangle(cornerRadius: 1.5)
+                            .fill(Color.white.opacity(0.1))
+                            .frame(height: 3)
+
+                        GeometryReader { barGeo in
+                            RoundedRectangle(cornerRadius: 1.5)
+                                .fill(ratingBarColor(player.stats.overall))
+                                .frame(width: barGeo.size.width * CGFloat(player.stats.overall) / 100.0, height: 3)
+                        }
+                        .frame(height: 3)
+                    }
+                }
+
+                Spacer()
+
+                Text("\(player.stats.overall)")
+                    .font(.system(size: 11, weight: .black, design: .rounded))
+                    .foregroundStyle(statColor(player.stats.overall))
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 6)
+            .background(
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(Color.white.opacity(canSwap ? 0.06 : 0.03))
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
+    // MARK: - Bottom Bar
+
+    private var bottomBar: some View {
+        HStack(spacing: 0) {
+            // Reset
+            Button {
+                selectedSlot = nil
+                quickPickXI()
+            } label: {
+                HStack(spacing: 5) {
+                    Image(systemName: "arrow.counterclockwise")
+                        .font(.system(size: 11))
+                    Text("Reset")
+                        .font(.system(size: 11, weight: .bold))
+                }
+                .foregroundStyle(.white.opacity(0.8))
+                .padding(.horizontal, 16)
+                .padding(.vertical, 9)
+                .background(Color.white.opacity(0.08))
+                .clipShape(.rect(cornerRadius: 6))
+            }
+            .buttonStyle(.plain)
+
+            Spacer()
+
+            // Formation display
+            HStack(spacing: 6) {
+                Image(systemName: "rectangle.3.group")
+                    .font(.system(size: 10))
+                    .foregroundStyle(.orange)
+                Text(formation)
+                    .font(.system(size: 12, weight: .bold, design: .monospaced))
+                    .foregroundStyle(.white)
+            }
+
+            Spacer()
+
+            // Rating
+            HStack(spacing: 5) {
+                Image(systemName: "star.fill")
+                    .font(.system(size: 10))
+                    .foregroundStyle(.green)
+                Text(String(format: "%.0f", averageOVR))
+                    .font(.system(size: 12, weight: .bold, design: .monospaced))
+                    .foregroundStyle(.white)
+                Text("AVG")
+                    .font(.system(size: 9, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.4))
+            }
+
+            Spacer()
+
+            // Quick Pick
+            Button {
+                selectedSlot = nil
+                quickPickXI()
+            } label: {
+                HStack(spacing: 5) {
+                    Image(systemName: "bolt.fill")
+                        .font(.system(size: 10))
+                    Text("Auto Pick")
+                        .font(.system(size: 11, weight: .bold))
+                }
+                .foregroundStyle(.black)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 9)
+                .background(Color.orange)
+                .clipShape(.rect(cornerRadius: 6))
+            }
+            .buttonStyle(.plain)
+
+            Spacer()
+
+            // Confirm
+            Button {
+                viewModel.currentScreen = .dashboard
+            } label: {
+                Text("Confirm")
+                    .font(.system(size: 12, weight: .black))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 9)
+                    .background(
+                        LinearGradient(
+                            colors: [Color(red: 0.18, green: 0.8, blue: 0.44),
+                                     Color(red: 0.15, green: 0.68, blue: 0.38)],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+                    .clipShape(.rect(cornerRadius: 6))
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 8)
+        .background(Color(red: 0.08, green: 0.1, blue: 0.22))
+    }
+
+    // MARK: - Swap Logic
 
     private func swapPlayer(slot: Int, with newPlayer: Player) {
         guard slot < startingXI.count else { return }
@@ -649,5 +942,18 @@ struct TacticsView: View {
 
     private func statColor(_ value: Int) -> Color {
         ColorHelpers.statColor(value)
+    }
+
+    private func ratingBarColor(_ rating: Int) -> Color {
+        if rating >= 75 { return Color(red: 0.18, green: 0.8, blue: 0.44) }
+        if rating >= 60 { return Color(red: 0.95, green: 0.77, blue: 0.06) }
+        return Color(red: 0.91, green: 0.3, blue: 0.24)
+    }
+
+    private func positionBadgeColor(_ pos: PlayerPosition) -> Color {
+        if pos == .goalkeeper { return Color(red: 0.2, green: 0.6, blue: 0.3) }
+        if pos.isDefender { return Color(red: 0.2, green: 0.35, blue: 0.65) }
+        if pos.isMidfielder { return Color(red: 0.5, green: 0.18, blue: 0.35) }
+        return Color(red: 0.75, green: 0.2, blue: 0.2) // Forwards
     }
 }
