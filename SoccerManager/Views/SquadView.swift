@@ -34,7 +34,16 @@ struct SquadView: View {
         if let pos = selectedPosition {
             list = list.filter { $0.position == pos }
         }
-        guard let sortBy else { return list }
+        guard let sortBy else {
+            // Default: sort by position order
+            let order = Self.positionOrder
+            list.sort {
+                let i0 = order.firstIndex(of: $0.position) ?? 99
+                let i1 = order.firstIndex(of: $1.position) ?? 99
+                return i0 < i1
+            }
+            return list
+        }
         let asc = sortDirection == .ascending
         switch sortBy {
         case .position:

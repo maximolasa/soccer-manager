@@ -13,6 +13,8 @@ nonisolated enum GameScreen: Sendable {
     case clubInfo
     case tactics
     case matchResult
+    case rivalSquad
+    case managerStats
 }
 
 nonisolated enum TransferWindowStatus: Sendable {
@@ -55,6 +57,21 @@ class GameViewModel {
     var myPlayers: [Player] {
         guard let clubId = selectedClubId else { return [] }
         return players.filter { $0.clubId == clubId }
+    }
+
+    var rivalClubId: UUID? {
+        guard let match = nextMatch else { return nil }
+        return match.homeClubId == selectedClubId ? match.awayClubId : match.homeClubId
+    }
+
+    var rivalClub: Club? {
+        guard let rivalId = rivalClubId else { return nil }
+        return clubs.first { $0.id == rivalId }
+    }
+
+    var rivalPlayers: [Player] {
+        guard let rivalId = rivalClubId else { return [] }
+        return players.filter { $0.clubId == rivalId }
     }
 
     var nextMatch: Match? {
@@ -511,6 +528,19 @@ class GameViewModel {
     }
 
     func continueFromResult() {
+        // Simulate all other matches on the same date (all leagues play together)
+        if let match = currentMatch {
+            let cal = Calendar.current
+            let allFixtures = seasonFixtures + cupFixtures + friendlyFixtures
+            let sameDayMatches = allFixtures.filter {
+                !$0.isPlayed
+                && $0.id != match.id
+                && cal.isDate($0.date, inSameDayAs: match.date)
+            }
+            for m in sameDayMatches {
+                simulateMatch(m)
+            }
+        }
         currentMatch = nil
         currentScreen = .dashboard
     }

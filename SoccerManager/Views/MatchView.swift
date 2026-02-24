@@ -6,11 +6,46 @@ struct MatchView: View {
     @State private var isPlaying: Bool = false
     @State private var displayedEvents: [MatchEvent] = []
     @State private var selectedTab: MatchTab = .overview
+    @State private var simulationSpeed: SimulationSpeed = .normal
+    @State private var hasStarted: Bool = false
+    @State private var simulationTask: Task<Void, Never>?
+    @State private var displayedHomeScore: Int = 0
+    @State private var displayedAwayScore: Int = 0
 
     nonisolated enum MatchTab: String, CaseIterable, Sendable {
         case overview = "Overview"
         case stats = "Match Stats"
         case ratings = "Player Ratings"
+    }
+
+    nonisolated enum SimulationSpeed: Sendable {
+        case normal   // 1x
+        case fast     // 2x
+        case veryFast // 4x
+
+        var label: String {
+            switch self {
+            case .normal: return "1x"
+            case .fast: return "2x"
+            case .veryFast: return "4x"
+            }
+        }
+
+        var millisPerMinute: Int {
+            switch self {
+            case .normal: return 500
+            case .fast: return 250
+            case .veryFast: return 100
+            }
+        }
+
+        var next: SimulationSpeed {
+            switch self {
+            case .normal: return .fast
+            case .fast: return .veryFast
+            case .veryFast: return .normal
+            }
+        }
     }
 
     var match: Match? { viewModel.currentMatch }
@@ -54,13 +89,13 @@ struct MatchView: View {
                 }
 
                 HStack(spacing: 8) {
-                    Text("\(match.homeScore)")
+                    Text("\(displayedHomeScore)")
                         .font(.system(size: 32, weight: .black, design: .monospaced))
                         .foregroundStyle(.white)
                     Text("-")
                         .font(.title2)
                         .foregroundStyle(.white.opacity(0.3))
-                    Text("\(match.awayScore)")
+                    Text("\(displayedAwayScore)")
                         .font(.system(size: 32, weight: .black, design: .monospaced))
                         .foregroundStyle(.white)
                 }
@@ -140,12 +175,12 @@ struct MatchView: View {
                 }
             }
 
-            if !match.isPlayed && displayedEvents.isEmpty {
+            if !hasStarted && displayedEvents.isEmpty {
                 VStack(spacing: 12) {
                     Image(systemName: "sportscourt.fill")
                         .font(.system(size: 40))
                         .foregroundStyle(.white.opacity(0.1))
-                    Text("Press Play to start the match")
+                    Text("Press Simulate Match to start")
                         .font(.caption)
                         .foregroundStyle(.white.opacity(0.3))
                 }
@@ -269,24 +304,58 @@ struct MatchView: View {
 
     private func matchBottomBar(_ match: Match) -> some View {
         HStack {
-            if !match.isPlayed {
+            if !match.isPlayed && !hasStarted {
+                // Not started yet — show Simulate Match
                 Button {
-                    simulateWithAnimation(match)
+                    startSimulation(match)
                 } label: {
                     HStack(spacing: 6) {
-                        Image(systemName: isPlaying ? "pause.fill" : "play.fill")
-                        Text(isPlaying ? "Simulating..." : "Play Match")
+                        Image(systemName: "play.fill")
+                        Text("Simulate Match")
                             .fontWeight(.bold)
                     }
                     .font(.caption)
                     .foregroundStyle(.black)
                     .padding(.horizontal, 20)
                     .padding(.vertical, 8)
-                    .background(isPlaying ? Color.yellow : Color.green)
+                    .background(Color.green)
                     .clipShape(.capsule)
                 }
-                .disabled(isPlaying)
-            } else {
+            } else if isPlaying {
+                // Simulating — show speed toggle + skip to end
+                Button {
+                    simulationSpeed = simulationSpeed.next
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "gauge.medium")
+                        Text(simulationSpeed.label)
+                            .fontWeight(.bold)
+                    }
+                    .font(.caption)
+                    .foregroundStyle(.black)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+                    .background(Color.cyan)
+                    .clipShape(.capsule)
+                }
+
+                Button {
+                    skipToEnd(match)
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "forward.end.fill")
+                        Text("Skip to End")
+                            .fontWeight(.bold)
+                    }
+                    .font(.caption)
+                    .foregroundStyle(.black)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 8)
+                    .background(Color.orange)
+                    .clipShape(.capsule)
+                }
+            } else if match.isPlayed {
+                // Match ended — show Continue
                 Button {
                     viewModel.continueFromResult()
                 } label: {
@@ -306,7 +375,19 @@ struct MatchView: View {
 
             Spacer()
 
-            if match.isPlayed {
+            if isPlaying {
+                HStack(spacing: 6) {
+                    Circle()
+                        .fill(.red)
+                        .frame(width: 6, height: 6)
+                    Text("LIVE")
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundStyle(.red)
+                    Text("Speed: \(simulationSpeed.label)")
+                        .font(.system(size: 9))
+                        .foregroundStyle(.white.opacity(0.4))
+                }
+            } else if match.isPlayed {
                 Text("Full Time")
                     .font(.caption)
                     .fontWeight(.bold)
@@ -316,6 +397,54 @@ struct MatchView: View {
         .padding(.horizontal, 16)
         .padding(.vertical, 8)
         .background(Color(white: 0.08))
+    }
+
+    private func startSimulation(_ match: Match) {
+        hasStarted = true
+        isPlaying = true
+        currentMinute = 0
+        displayedEvents = []
+        displayedHomeScore = 0
+        displayedAwayScore = 0
+
+        // Pre-compute the match result
+        viewModel.simulateMatch(match)
+        let allEvents = match.events.sorted { $0.minute < $1.minute }
+
+        // Animate progressively
+        simulationTask = Task {
+            for minute in 1...90 {
+                let ms = simulationSpeed.millisPerMinute
+                try? await Task.sleep(for: .milliseconds(ms))
+                if Task.isCancelled { return }
+                currentMinute = minute
+                let newEvents = allEvents.filter { $0.minute == minute }
+                for event in newEvents {
+                    displayedEvents.append(event)
+                    if event.type == .goal {
+                        if event.isHome {
+                            displayedHomeScore += 1
+                        } else {
+                            displayedAwayScore += 1
+                        }
+                    }
+                }
+            }
+            // Simulation finished
+            isPlaying = false
+            displayedHomeScore = match.homeScore
+            displayedAwayScore = match.awayScore
+        }
+    }
+
+    private func skipToEnd(_ match: Match) {
+        simulationTask?.cancel()
+        simulationTask = nil
+        isPlaying = false
+        currentMinute = 90
+        displayedEvents = match.events.sorted { $0.minute < $1.minute }
+        displayedHomeScore = match.homeScore
+        displayedAwayScore = match.awayScore
     }
 
     private func eventRow(_ event: MatchEvent, match: Match) -> some View {
@@ -425,26 +554,5 @@ struct MatchView: View {
             .frame(height: 4)
         }
         .padding(.vertical, 4)
-    }
-
-    private func simulateWithAnimation(_ match: Match) {
-        isPlaying = true
-        currentMinute = 0
-        displayedEvents = []
-
-        viewModel.simulateMatch(match)
-        let allEvents = match.events.sorted { $0.minute < $1.minute }
-
-        Task {
-            for minute in 1...90 {
-                try? await Task.sleep(for: .milliseconds(30))
-                currentMinute = minute
-                let newEvents = allEvents.filter { $0.minute == minute }
-                for event in newEvents {
-                    displayedEvents.append(event)
-                }
-            }
-            isPlaying = false
-        }
     }
 }

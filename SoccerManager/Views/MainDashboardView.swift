@@ -110,36 +110,43 @@ struct MainDashboardView: View {
         DashboardCard(title: "NEXT MATCH", icon: "sportscourt.fill", accentColor: .green) {
             if let match = viewModel.nextMatch {
                 VStack(spacing: 8) {
-                    Text(match.matchType.rawValue)
-                        .font(.caption2)
-                        .fontWeight(.semibold)
-                        .foregroundStyle(.green)
-                        .textCase(.uppercase)
-
-                    HStack(spacing: 12) {
-                        VStack(spacing: 4) {
-                            clubBadge(match.homeClubName)
-                            Text(match.homeClubName)
+                    Button {
+                        viewModel.currentScreen = .rivalSquad
+                    } label: {
+                        VStack(spacing: 8) {
+                            Text(match.matchType.rawValue)
                                 .font(.caption2)
-                                .fontWeight(.medium)
-                                .lineLimit(1)
-                        }
-                        .frame(maxWidth: .infinity)
+                                .fontWeight(.semibold)
+                                .foregroundStyle(.green)
+                                .textCase(.uppercase)
 
-                        Text("vs")
-                            .font(.caption)
-                            .fontWeight(.bold)
-                            .foregroundStyle(.white.opacity(0.4))
+                            HStack(spacing: 12) {
+                                VStack(spacing: 4) {
+                                    clubBadge(match.homeClubName)
+                                    Text(match.homeClubName)
+                                        .font(.caption2)
+                                        .fontWeight(.medium)
+                                        .lineLimit(1)
+                                }
+                                .frame(maxWidth: .infinity)
 
-                        VStack(spacing: 4) {
-                            clubBadge(match.awayClubName)
-                            Text(match.awayClubName)
-                                .font(.caption2)
-                                .fontWeight(.medium)
-                                .lineLimit(1)
+                                Text("vs")
+                                    .font(.caption)
+                                    .fontWeight(.bold)
+                                    .foregroundStyle(.white.opacity(0.4))
+
+                                VStack(spacing: 4) {
+                                    clubBadge(match.awayClubName)
+                                    Text(match.awayClubName)
+                                        .font(.caption2)
+                                        .fontWeight(.medium)
+                                        .lineLimit(1)
+                                }
+                                .frame(maxWidth: .infinity)
+                            }
                         }
-                        .frame(maxWidth: .infinity)
                     }
+                    .buttonStyle(.plain)
 
                     if viewModel.isMatchDay && viewModel.todayMatch?.id == match.id {
                         Button {
@@ -169,28 +176,33 @@ struct MainDashboardView: View {
     }
 
     private var upcomingFixturesCard: some View {
-        DashboardCard(title: "UPCOMING", icon: "calendar", accentColor: .blue, expandVertically: true) {
-            VStack(spacing: 4) {
-                ForEach(Array(viewModel.upcomingFixtures.prefix(6))) { match in
-                    HStack {
-                        Text(matchDateString(match.date))
-                            .font(.system(size: 8))
-                            .foregroundStyle(.white.opacity(0.35))
-                            .frame(width: 50, alignment: .leading)
-                        Text(match.matchType.rawValue)
-                            .font(.system(size: 9, weight: .semibold))
-                            .foregroundStyle(.blue)
-                            .frame(width: 40, alignment: .leading)
-                        Text("\(match.homeClubName) vs \(match.awayClubName)")
-                            .font(.system(size: 9))
-                            .foregroundStyle(.white.opacity(0.7))
-                            .lineLimit(1)
-                        Spacer()
+        Button {
+            viewModel.currentScreen = .calendar
+        } label: {
+            DashboardCard(title: "UPCOMING", icon: "calendar", accentColor: .blue, expandVertically: true) {
+                VStack(spacing: 4) {
+                    ForEach(Array(viewModel.upcomingFixtures.prefix(6))) { match in
+                        HStack {
+                            Text(matchDateString(match.date))
+                                .font(.system(size: 8))
+                                .foregroundStyle(.white.opacity(0.35))
+                                .frame(width: 50, alignment: .leading)
+                            Text(match.matchType.rawValue)
+                                .font(.system(size: 9, weight: .semibold))
+                                .foregroundStyle(.blue)
+                                .frame(width: 40, alignment: .leading)
+                            Text("\(match.homeClubName) vs \(match.awayClubName)")
+                                .font(.system(size: 9))
+                                .foregroundStyle(.white.opacity(0.7))
+                                .lineLimit(1)
+                            Spacer()
+                        }
+                        .padding(.vertical, 2)
                     }
-                    .padding(.vertical, 2)
                 }
             }
         }
+        .buttonStyle(.plain)
     }
 
     private var teamInfoCard: some View {
@@ -251,13 +263,18 @@ struct MainDashboardView: View {
     }
 
     private var managerCard: some View {
-        DashboardCard(title: "MANAGER", icon: "person.fill", accentColor: .purple) {
-            VStack(spacing: 4) {
-                infoRow("League Titles", "\(viewModel.managerLeagueTitles)")
-                infoRow("Cup Wins", "\(viewModel.managerCupWins)")
-                infoRow("Season", "\(viewModel.seasonYear)/\(viewModel.seasonYear + 1)")
+        Button {
+            viewModel.currentScreen = .managerStats
+        } label: {
+            DashboardCard(title: "MANAGER", icon: "person.fill", accentColor: .purple) {
+                VStack(spacing: 4) {
+                    infoRow("League Titles", "\(viewModel.managerLeagueTitles)")
+                    infoRow("Cup Wins", "\(viewModel.managerCupWins)")
+                    infoRow("Season", "\(viewModel.seasonYear)/\(viewModel.seasonYear + 1)")
+                }
             }
         }
+        .buttonStyle(.plain)
     }
 
     private var quickActionsGrid: some View {

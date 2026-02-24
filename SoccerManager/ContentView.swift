@@ -28,6 +28,10 @@ struct ContentView: View {
                 TacticsView(viewModel: viewModel)
             case .clubInfo:
                 MainDashboardView(viewModel: viewModel)
+            case .rivalSquad:
+                RivalSquadView(viewModel: viewModel)
+            case .managerStats:
+                ManagerStatsView(viewModel: viewModel)
             }
         }
         .preferredColorScheme(.dark)
