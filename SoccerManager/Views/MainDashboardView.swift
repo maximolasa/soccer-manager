@@ -107,7 +107,7 @@ struct MainDashboardView: View {
     }
 
     private var nextMatchCard: some View {
-        DashboardCard(title: "NEXT MATCH", icon: "sportscourt.fill", accentColor: .green, expandVertically: true) {
+        DashboardCard(title: "NEXT MATCH", icon: "sportscourt.fill", accentColor: .green) {
             if let match = viewModel.nextMatch {
                 VStack(spacing: 10) {
                     Button {
@@ -205,7 +205,7 @@ struct MainDashboardView: View {
             DashboardCard(title: "UPCOMING", icon: "calendar", accentColor: .blue) {
                 VStack(spacing: 4) {
                     ForEach(Array(viewModel.upcomingFixtures.prefix(5))) { match in
-                        HStack {
+                        HStack(spacing: 6) {
                             Text(matchDateString(match.date))
                                 .font(.system(size: 8))
                                 .foregroundStyle(.white.opacity(0.35))
@@ -213,12 +213,15 @@ struct MainDashboardView: View {
                             Text(match.matchType.rawValue)
                                 .font(.system(size: 9, weight: .semibold))
                                 .foregroundStyle(.blue)
-                                .frame(width: 40, alignment: .leading)
-                            Text("\(match.homeClubName) vs \(match.awayClubName)")
+                                .frame(width: 35, alignment: .leading)
+                            Text(upcomingRivalLabel(match))
                                 .font(.system(size: 9))
                                 .foregroundStyle(.white.opacity(0.7))
                                 .lineLimit(1)
                             Spacer()
+                            Text(match.homeClubId == viewModel.selectedClubId ? "H" : "A")
+                                .font(.system(size: 8, weight: .bold, design: .monospaced))
+                                .foregroundStyle(match.homeClubId == viewModel.selectedClubId ? .green.opacity(0.7) : .orange.opacity(0.7))
                         }
                         .padding(.vertical, 2)
                     }
@@ -262,8 +265,8 @@ struct MainDashboardView: View {
             viewModel.currentScreen = .standings
         } label: {
             DashboardCard(title: "STANDINGS", icon: "trophy.fill", accentColor: .yellow, expandVertically: true) {
-                VStack(spacing: 2) {
-                    ForEach(Array(viewModel.currentLeagueStandings.prefix(5).enumerated()), id: \.element.id) { idx, entry in
+                VStack(spacing: 1) {
+                    ForEach(Array(viewModel.currentLeagueStandings.prefix(7).enumerated()), id: \.element.id) { idx, entry in
                         HStack {
                             Text("\(idx + 1).")
                                 .font(.system(size: 9, weight: .bold, design: .monospaced))
@@ -438,6 +441,12 @@ struct MainDashboardView: View {
                 .font(.system(size: 10, weight: .semibold))
                 .foregroundStyle(.white)
         }
+    }
+
+    private func upcomingRivalLabel(_ match: Match) -> String {
+        let isHome = match.homeClubId == viewModel.selectedClubId
+        let rival = isHome ? match.awayClubName : match.homeClubName
+        return "vs \(rival)"
     }
 
     private func matchDateString(_ date: Date) -> String {
