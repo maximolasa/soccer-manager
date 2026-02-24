@@ -76,7 +76,8 @@ struct MainDashboardView: View {
             }
         }
         .padding(.horizontal, 24)
-        .padding(.vertical, 8)
+        .padding(.vertical, 10)
+        .padding(.top, 4)
         .background(Color(white: 0.1))
         .fixedSize(horizontal: false, vertical: true)
     }

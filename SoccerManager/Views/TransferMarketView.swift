@@ -142,10 +142,10 @@ struct TransferMarketView: View {
 
     private var windowBadge: some View {
         Text(viewModel.transferWindow.label)
-            .font(.system(size: 9, weight: .bold))
+            .font(.system(size: 10, weight: .bold))
             .foregroundStyle(viewModel.transferWindow == .open ? .green : .red)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 3)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 4)
             .background(
                 (viewModel.transferWindow == .open ? Color.green : Color.red).opacity(0.15)
             )
@@ -159,9 +159,9 @@ struct TransferMarketView: View {
                     withAnimation(.spring(duration: 0.2)) { selectedTab = tab }
                 } label: {
                     Text(tab.rawValue)
-                        .font(.system(size: 11, weight: .semibold))
+                        .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(selectedTab == tab ? .green : .white.opacity(0.4))
-                        .padding(.vertical, 8)
+                        .padding(.vertical, 10)
                         .frame(maxWidth: .infinity)
                         .background(selectedTab == tab ? Color.green.opacity(0.1) : .clear)
                 }
@@ -173,7 +173,7 @@ struct TransferMarketView: View {
 
     private var filtersRow: some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 6) {
+            HStack(spacing: 8) {
                 filterChip("All", isSelected: positionFilter == nil) {
                     positionFilter = nil
                 }
@@ -183,8 +183,8 @@ struct TransferMarketView: View {
                     }
                 }
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 6)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 8)
         }
         .background(Color(white: 0.06))
     }
@@ -195,20 +195,20 @@ struct TransferMarketView: View {
                 Text("Player")
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .foregroundStyle(.white.opacity(0.4))
-                sortableHeader("Pos", option: .position, width: 32)
-                sortableHeader("Age", option: .age, width: 32)
-                sortableHeader("OVR", option: .overall, width: 36)
-                sortableHeader("OFF", option: .offensive, width: 36)
-                sortableHeader("DEF", option: .defensive, width: 36)
+                sortableHeader("Pos", option: .position, width: 40)
+                sortableHeader("Age", option: .age, width: 36)
+                sortableHeader("OVR", option: .overall, width: 40)
+                sortableHeader("OFF", option: .offensive, width: 40)
+                sortableHeader("DEF", option: .defensive, width: 40)
                 Text("Club")
-                    .frame(width: 70)
+                    .frame(width: 75)
                     .foregroundStyle(.white.opacity(0.4))
-                sortableHeader("Value", option: .value, width: 60)
-                Text("").frame(width: 60)
+                sortableHeader("Value", option: .value, width: 68)
+                Text("").frame(width: 64)
             }
-            .font(.system(size: 9, weight: .bold))
-            .padding(.horizontal, 12)
-            .padding(.vertical, 6)
+            .font(.system(size: 10, weight: .bold))
+            .padding(.horizontal, 14)
+            .padding(.vertical, 8)
             .background(Color.white.opacity(0.03))
 
             LazyVStack(spacing: 0) {
@@ -222,46 +222,46 @@ struct TransferMarketView: View {
     private func transferRow(_ player: Player) -> some View {
         HStack(spacing: 0) {
             Text(player.fullName)
-                .font(.system(size: 10, weight: .medium))
+                .font(.system(size: 12, weight: .medium))
                 .foregroundStyle(.white)
                 .lineLimit(1)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
             Text(player.position.rawValue)
-                .font(.system(size: 9, weight: .semibold))
+                .font(.system(size: 10, weight: .semibold))
                 .foregroundStyle(.cyan)
-                .frame(width: 32)
+                .frame(width: 40)
 
             Text("\(player.age)")
-                .font(.system(size: 9))
+                .font(.system(size: 10))
                 .foregroundStyle(.white.opacity(0.7))
-                .frame(width: 32)
+                .frame(width: 36)
 
             Text("\(player.stats.overall)")
-                .font(.system(size: 9, weight: .bold, design: .monospaced))
+                .font(.system(size: 11, weight: .bold, design: .monospaced))
                 .foregroundStyle(statColor(player.stats.overall))
-                .frame(width: 36)
+                .frame(width: 40)
 
             Text("\(player.stats.offensive)")
-                .font(.system(size: 9, design: .monospaced))
+                .font(.system(size: 10, design: .monospaced))
                 .foregroundStyle(.white.opacity(0.6))
-                .frame(width: 36)
+                .frame(width: 40)
 
             Text("\(player.stats.defensive)")
-                .font(.system(size: 9, design: .monospaced))
+                .font(.system(size: 10, design: .monospaced))
                 .foregroundStyle(.white.opacity(0.6))
-                .frame(width: 36)
+                .frame(width: 40)
 
             Text(player.clubId != nil ? viewModel.clubName(for: player.clubId!) : "Free")
-                .font(.system(size: 9))
+                .font(.system(size: 10))
                 .foregroundStyle(.white.opacity(0.5))
                 .lineLimit(1)
-                .frame(width: 70)
+                .frame(width: 75)
 
             Text(viewModel.formatCurrency(player.marketValue))
-                .font(.system(size: 9))
+                .font(.system(size: 10))
                 .foregroundStyle(.white.opacity(0.5))
-                .frame(width: 60)
+                .frame(width: 68)
 
             Button {
                 selectedPlayer = player
@@ -269,18 +269,18 @@ struct TransferMarketView: View {
                 showingOffer = true
             } label: {
                 Text(actionLabel)
-                    .font(.system(size: 9, weight: .bold))
+                    .font(.system(size: 10, weight: .bold))
                     .foregroundStyle(.black)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 3)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
                     .background(Color.green)
                     .clipShape(.capsule)
             }
-            .frame(width: 60)
+            .frame(width: 64)
             .buttonStyle(.plain)
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 5)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 7)
         .background(Color.white.opacity(0.02))
     }
 
@@ -374,10 +374,10 @@ struct TransferMarketView: View {
     private func filterChip(_ text: String, isSelected: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Text(text)
-                .font(.system(size: 9, weight: .semibold))
+                .font(.system(size: 11, weight: .semibold))
                 .foregroundStyle(isSelected ? .black : .white.opacity(0.6))
-                .padding(.horizontal, 8)
-                .padding(.vertical, 4)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
                 .background(isSelected ? Color.green : Color.white.opacity(0.08))
                 .clipShape(.capsule)
         }

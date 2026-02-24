@@ -96,40 +96,40 @@ struct YouthAcademyView: View {
         VStack(spacing: 0) {
             HStack {
                 Text("YOUTH PLAYERS")
-                    .font(.system(size: 10, weight: .bold))
+                    .font(.system(size: 11, weight: .bold))
                     .foregroundStyle(.purple)
                     .tracking(1)
                 Spacer()
                 Text("\(youthPlayers.count) players (U21)")
-                    .font(.caption2)
+                    .font(.caption)
                     .foregroundStyle(.white.opacity(0.4))
             }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 6)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
             .background(Color.white.opacity(0.03))
 
             ScrollView {
                 LazyVStack(spacing: 0) {
                     ForEach(youthPlayers) { player in
                         HStack(spacing: 8) {
-                            VStack(alignment: .leading, spacing: 1) {
+                            VStack(alignment: .leading, spacing: 2) {
                                 Text(player.fullName)
-                                    .font(.system(size: 10, weight: .medium))
+                                    .font(.system(size: 12, weight: .medium))
                                     .foregroundStyle(.white)
                                 Text("\(player.position.fullName) | Age \(player.age)")
-                                    .font(.system(size: 8))
+                                    .font(.system(size: 9))
                                     .foregroundStyle(.white.opacity(0.4))
                             }
 
                             Spacer()
 
-                            HStack(spacing: 6) {
+                            HStack(spacing: 8) {
                                 miniStatBadge("OVR", player.stats.overall, .green)
                                 miniStatBadge("POT", player.potentialPeak, .cyan)
                             }
                         }
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 6)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 7)
                     }
                 }
             }
@@ -139,17 +139,17 @@ struct YouthAcademyView: View {
     }
 
     private func upgradeCard(title: String, icon: String, level: Int, description: String, cost: Int, color: Color, action: @escaping () -> Void) -> some View {
-        VStack(spacing: 6) {
+        VStack(spacing: 8) {
             HStack {
                 Image(systemName: icon)
-                    .font(.system(size: 14))
+                    .font(.system(size: 16))
                     .foregroundStyle(color)
                 Text(title)
-                    .font(.system(size: 11, weight: .bold))
+                    .font(.system(size: 12, weight: .bold))
                     .foregroundStyle(.white)
                 Spacer()
                 Text("Lv.\(level)")
-                    .font(.system(size: 10, weight: .bold, design: .monospaced))
+                    .font(.system(size: 11, weight: .bold, design: .monospaced))
                     .foregroundStyle(color)
             }
 
@@ -158,20 +158,20 @@ struct YouthAcademyView: View {
             }
 
             Text(description)
-                .font(.system(size: 9))
+                .font(.system(size: 10))
                 .foregroundStyle(.white.opacity(0.5))
 
             if level < 10 {
                 Button(action: action) {
                     HStack(spacing: 4) {
                         Image(systemName: "arrow.up.circle.fill")
-                            .font(.system(size: 10))
+                            .font(.system(size: 11))
                         Text("Upgrade: \(viewModel.formatCurrency(cost))")
-                            .font(.system(size: 9, weight: .bold))
+                            .font(.system(size: 10, weight: .bold))
                     }
                     .foregroundStyle(.black)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 5)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 7)
                     .frame(maxWidth: .infinity)
                     .background(color)
                     .clipShape(.capsule)
@@ -179,7 +179,7 @@ struct YouthAcademyView: View {
                 .buttonStyle(.plain)
             }
         }
-        .padding(10)
+        .padding(12)
         .background(Color.white.opacity(0.05))
         .clipShape(.rect(cornerRadius: 12))
         .overlay(
@@ -199,16 +199,16 @@ struct YouthAcademyView: View {
     }
 
     private func miniStatBadge(_ label: String, _ value: Int, _ color: Color) -> some View {
-        VStack(spacing: 1) {
+        VStack(spacing: 2) {
             Text("\(value)")
-                .font(.system(size: 10, weight: .bold, design: .monospaced))
+                .font(.system(size: 11, weight: .bold, design: .monospaced))
                 .foregroundStyle(color)
             Text(label)
-                .font(.system(size: 7, weight: .medium))
+                .font(.system(size: 8, weight: .medium))
                 .foregroundStyle(.white.opacity(0.3))
         }
-        .padding(.horizontal, 6)
-        .padding(.vertical, 3)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
         .background(color.opacity(0.1))
         .clipShape(.rect(cornerRadius: 6))
     }

@@ -90,7 +90,7 @@ struct StandingsView: View {
 
     private var leagueSelector: some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 6) {
+            HStack(spacing: 8) {
                 ForEach(viewModel.leagues) { league in
                     Button {
                         selectedLeague = league
@@ -100,13 +100,13 @@ struct StandingsView: View {
                             Text(league.name)
                                 .lineLimit(1)
                         }
-                        .font(.system(size: 10, weight: .semibold))
+                        .font(.system(size: 11, weight: .semibold))
                         .foregroundStyle(
                             (selectedLeague?.id ?? viewModel.selectedClub?.leagueId) == league.id
                             ? .black : .white.opacity(0.6)
                         )
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 5)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
                         .background(
                             (selectedLeague?.id ?? viewModel.selectedClub?.leagueId) == league.id
                             ? Color.green : Color.white.opacity(0.08)
@@ -116,8 +116,8 @@ struct StandingsView: View {
                     .buttonStyle(.plain)
                 }
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
         }
         .background(Color(white: 0.07))
     }
@@ -126,53 +126,53 @@ struct StandingsView: View {
         ScrollView {
             VStack(spacing: 0) {
                 HStack(spacing: 0) {
-                    Text("#").frame(width: 24, alignment: .center)
+                    Text("#").frame(width: 28, alignment: .center)
                         .foregroundStyle(.white.opacity(0.4))
                     Text("Club").frame(maxWidth: .infinity, alignment: .leading)
                         .foregroundStyle(.white.opacity(0.4))
-                    sortableHeader("P", option: .played, width: 28)
-                    sortableHeader("W", option: .won, width: 28)
-                    sortableHeader("D", option: .drawn, width: 28)
-                    sortableHeader("L", option: .lost, width: 28)
-                    sortableHeader("GF", option: .goalsFor, width: 32)
-                    sortableHeader("GA", option: .goalsAgainst, width: 32)
-                    sortableHeader("GD", option: .goalDifference, width: 32)
-                    sortableHeader("Pts", option: .points, width: 36)
+                    sortableHeader("P", option: .played, width: 32)
+                    sortableHeader("W", option: .won, width: 32)
+                    sortableHeader("D", option: .drawn, width: 32)
+                    sortableHeader("L", option: .lost, width: 32)
+                    sortableHeader("GF", option: .goalsFor, width: 36)
+                    sortableHeader("GA", option: .goalsAgainst, width: 36)
+                    sortableHeader("GD", option: .goalDifference, width: 36)
+                    sortableHeader("Pts", option: .points, width: 40)
                 }
-                .font(.system(size: 9, weight: .bold))
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
+                .font(.system(size: 10, weight: .bold))
+                .padding(.horizontal, 14)
+                .padding(.vertical, 8)
                 .background(Color.white.opacity(0.03))
 
                 ForEach(Array(displayStandings.enumerated()), id: \.element.id) { idx, entry in
                     HStack(spacing: 0) {
                         Text("\(idx + 1)")
-                            .frame(width: 24, alignment: .center)
+                            .frame(width: 28, alignment: .center)
                             .foregroundStyle(positionColor(idx, total: displayStandings.count))
 
                         Text(entry.clubName)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .fontWeight(entry.clubId == viewModel.selectedClubId ? .bold : .regular)
 
-                        Text("\(entry.played)").frame(width: 28)
-                        Text("\(entry.won)").frame(width: 28)
-                        Text("\(entry.drawn)").frame(width: 28)
-                        Text("\(entry.lost)").frame(width: 28)
-                        Text("\(entry.goalsFor)").frame(width: 32)
-                        Text("\(entry.goalsAgainst)").frame(width: 32)
+                        Text("\(entry.played)").frame(width: 32)
+                        Text("\(entry.won)").frame(width: 32)
+                        Text("\(entry.drawn)").frame(width: 32)
+                        Text("\(entry.lost)").frame(width: 32)
+                        Text("\(entry.goalsFor)").frame(width: 36)
+                        Text("\(entry.goalsAgainst)").frame(width: 36)
 
                         Text("\(entry.goalDifference)")
                             .foregroundStyle(entry.goalDifference > 0 ? .green : (entry.goalDifference < 0 ? .red : .white.opacity(0.5)))
-                            .frame(width: 32)
+                            .frame(width: 36)
 
                         Text("\(entry.points)")
                             .fontWeight(.bold)
-                            .frame(width: 36)
+                            .frame(width: 40)
                     }
-                    .font(.system(size: 10, design: .monospaced))
+                    .font(.system(size: 11, design: .monospaced))
                     .foregroundStyle(entry.clubId == viewModel.selectedClubId ? .green : .white.opacity(0.7))
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 5)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 6)
                     .background(entry.clubId == viewModel.selectedClubId ? Color.green.opacity(0.06) : .clear)
                 }
             }
