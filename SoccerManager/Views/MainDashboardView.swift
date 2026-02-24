@@ -173,14 +173,14 @@ struct MainDashboardView: View {
                         } label: {
                             HStack(spacing: 4) {
                                 Image(systemName: "forward.fill")
-                                    .font(.system(size: 8))
+                                    .font(.system(size: 9))
                                 Text("Skip to Match Day")
-                                    .font(.caption2)
+                                    .font(.caption)
                                     .fontWeight(.bold)
                             }
                             .foregroundStyle(.black)
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 5)
+                            .padding(.horizontal, 20)
+                            .padding(.vertical, 7)
                             .background(Color.green.opacity(0.85))
                             .clipShape(.capsule)
                         }
@@ -198,7 +198,7 @@ struct MainDashboardView: View {
         Button {
             viewModel.currentScreen = .calendar
         } label: {
-            DashboardCard(title: "UPCOMING", icon: "calendar", accentColor: .blue, expandVertically: true) {
+            DashboardCard(title: "UPCOMING", icon: "calendar", accentColor: .blue) {
                 VStack(spacing: 4) {
                     ForEach(Array(viewModel.upcomingFixtures.prefix(6))) { match in
                         HStack {
