@@ -506,9 +506,10 @@ class GameViewModel {
                 // Mail notification if it's our player
                 if p.clubId == selectedClubId {
                     let oppName = isHome ? (awayClub?.name ?? "opponent") : (homeClub?.name ?? "opponent")
+                    let weeksText = p.injuryWeeksLeft > 1 ? "\(p.injuryWeeksLeft) weeks" : "1 week"
                     sendMail(
-                        subject: "\u{1F534} \(p.fullName) injured in match",
-                        body: "\(p.fullName) was injured during the match against \(oppName) in minute \(minute). He will be out for \(p.injuryWeeksLeft) week\(p.injuryWeeksLeft > 1 ? "s" : "").",
+                        subject: "\(p.fullName) injured in match",
+                        body: "\(p.fullName) was injured during the match against \(oppName) in minute \(minute). He will be out for \(weeksText).",
                         category: .injury
                     )
                 }
@@ -715,7 +716,7 @@ class GameViewModel {
             player.contractYearsLeft = 3
             players.append(player)
             sendMail(
-                subject: "⭐ New youth talent: \(player.fullName)",
+                subject: "New youth talent: \(player.fullName)",
                 body: "The youth academy has produced \(player.fullName), a \(player.position.fullName) rated \(player.stats.overall) OVR. He has been added to your squad.",
                 category: .youth
             )
@@ -731,7 +732,7 @@ class GameViewModel {
                 if player.injuryWeeksLeft <= 0 {
                     player.isInjured = false
                     sendMail(
-                        subject: "🟢 \(player.fullName) recovered",
+                        subject: "\(player.fullName) recovered",
                         body: "\(player.fullName) has fully recovered from his injury and is available for selection.",
                         category: .injury
                     )
@@ -740,9 +741,10 @@ class GameViewModel {
                 if Double.random(in: 0...1) < 0.02 {
                     player.isInjured = true
                     player.injuryWeeksLeft = Int.random(in: 1...8)
+                    let weeksText = player.injuryWeeksLeft > 1 ? "\(player.injuryWeeksLeft) weeks" : "1 week"
                     sendMail(
-                        subject: "🔴 \(player.fullName) injured",
-                        body: "\(player.fullName) has picked up an injury during training and will be out for \(player.injuryWeeksLeft) week\(player.injuryWeeksLeft > 1 ? "s" : "").",
+                        subject: "\(player.fullName) injured",
+                        body: "\(player.fullName) has picked up an injury during training and will be out for \(weeksText).",
                         category: .injury
                     )
                 }
@@ -760,7 +762,7 @@ class GameViewModel {
         player.clubId = selectedClubId
         player.contractYearsLeft = Int.random(in: 2...5)
         sendMail(
-            subject: "✅ Transfer complete: \(player.fullName)",
+            subject: "Transfer complete: \(player.fullName)",
             body: "You have signed \(player.fullName) (\(player.position.rawValue), \(player.stats.overall) OVR) for \(formatCurrency(fee)). Contract: \(player.contractYearsLeft) years.",
             category: .transfer
         )
@@ -803,7 +805,7 @@ class GameViewModel {
         player.wage = wage
         newsMessages.insert("Signed free agent \(player.fullName)!", at: 0)
         sendMail(
-            subject: "\u2705 Free agent signed: \(player.fullName)",
+            subject: "Free agent signed: \(player.fullName)",
             body: "You have signed free agent \(player.fullName) (\(player.position.rawValue), \(player.stats.overall) OVR) on a \(player.contractYearsLeft)-year contract at \(formatCurrency(wage))/week.",
             category: .transfer
         )
