@@ -157,21 +157,7 @@ struct ManagerStatsView: View {
 
             HStack(spacing: 6) {
                 ForEach(Array(viewModel.recentResults.prefix(10).enumerated()), id: \.offset) { _, match in
-                    let isHome = match.homeClubId == viewModel.selectedClubId
-                    let myGoals = isHome ? match.homeScore : match.awayScore
-                    let theirGoals = isHome ? match.awayScore : match.homeScore
-                    let result: String
-                    let color: Color
-                    if myGoals > theirGoals { result = "W"; color = .green }
-                    else if myGoals < theirGoals { result = "L"; color = .red }
-                    else { result = "D"; color = .yellow }
-
-                    Text(result)
-                        .font(.system(size: 10, weight: .black))
-                        .foregroundStyle(.white)
-                        .frame(width: 24, height: 24)
-                        .background(color.opacity(0.8))
-                        .clipShape(.rect(cornerRadius: 4))
+                    formBadge(for: match)
                 }
 
                 if viewModel.recentResults.isEmpty {
@@ -184,6 +170,24 @@ struct ManagerStatsView: View {
         .padding(12)
         .background(Color.white.opacity(0.05))
         .clipShape(.rect(cornerRadius: 12))
+    }
+
+    private func formBadge(for match: Match) -> some View {
+        let isHome = match.homeClubId == viewModel.selectedClubId
+        let myGoals = isHome ? match.homeScore : match.awayScore
+        let theirGoals = isHome ? match.awayScore : match.homeScore
+        let result: String
+        let color: Color
+        if myGoals > theirGoals { result = "W"; color = .green }
+        else if myGoals < theirGoals { result = "L"; color = .red }
+        else { result = "D"; color = .yellow }
+
+        return Text(result)
+            .font(.system(size: 10, weight: .black))
+            .foregroundStyle(.white)
+            .frame(width: 24, height: 24)
+            .background(color.opacity(0.8))
+            .clipShape(.rect(cornerRadius: 4))
     }
 
     private var topScorersSection: some View {
