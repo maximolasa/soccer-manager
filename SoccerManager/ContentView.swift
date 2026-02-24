@@ -38,8 +38,6 @@ struct ContentView: View {
                 FinanceView(viewModel: viewModel)
             }
         }
-        .padding(.top, 6)
-        .background(Color(red: 0.06, green: 0.08, blue: 0.1).ignoresSafeArea())
         .preferredColorScheme(.dark)
         .onAppear {
             viewModel.initializeGame()

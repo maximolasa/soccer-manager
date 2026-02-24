@@ -47,6 +47,7 @@ struct YouthAcademyView: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 14)
+        .padding(.top, 6)
         .background(Color(white: 0.1))
         .fixedSize(horizontal: false, vertical: true)
     }
