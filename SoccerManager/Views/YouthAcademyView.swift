@@ -10,12 +10,14 @@ struct YouthAcademyView: View {
     var body: some View {
         VStack(spacing: 0) {
             headerBar
+                .layoutPriority(1)
 
             HStack(spacing: 12) {
                 academyUpgrades
                 youthPlayersPanel
             }
             .padding(12)
+            .frame(maxHeight: .infinity)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color(red: 0.06, green: 0.08, blue: 0.1).ignoresSafeArea())
@@ -46,8 +48,7 @@ struct YouthAcademyView: View {
             Color.clear.frame(width: 50)
         }
         .padding(.horizontal, 16)
-        .padding(.top, 24)
-        .padding(.bottom, 10)
+        .padding(.vertical, 14)
         .background(Color(white: 0.1))
         .fixedSize(horizontal: false, vertical: true)
     }
