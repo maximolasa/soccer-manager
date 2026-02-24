@@ -454,8 +454,8 @@ struct GameDataGenerator {
 
             // ─── LIGA PROFESIONAL DE FÚTBOL (ARGENTINA TIER 1) ───────────
             LeagueData(name: "Liga Profesional", country: "Argentina", emoji: "🇦🇷", tier: 1, maxRating: 85, clubs: [
-                ("River Plate", "RIV", 78, 35_000_000, "Monumental", 84567, "white", "red"),
                 ("Boca Juniors", "BOC", 80, 35_000_000, "La Bombonera", 54000, "navy", "yellow"),
+                ("River Plate", "RIV", 78, 35_000_000, "Monumental", 84567, "white", "red"),
                 ("Racing Club", "RAC", 74, 18_000_000, "El Cilindro", 51389, "skyblue", "white"),
                 ("Independiente", "IND", 72, 15_000_000, "Libertadores de America", 48069, "red", "white"),
                 ("San Lorenzo", "SLO", 71, 14_000_000, "Nuevo Gasometro", 47964, "blue", "red"),
