@@ -9,7 +9,7 @@ struct YouthAcademyView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            Spacer().frame(height: 10)
+            Spacer().frame(height: 20)
             headerBar
 
             HStack(spacing: 12) {
@@ -48,7 +48,6 @@ struct YouthAcademyView: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 14)
-        .padding(.top, 6)
         .background(Color(white: 0.1))
         .fixedSize(horizontal: false, vertical: true)
     }
