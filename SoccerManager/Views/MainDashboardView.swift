@@ -337,6 +337,7 @@ struct MainDashboardView: View {
                     .offset(x: -6, y: 6)
             }
         }
+        .frame(maxHeight: .infinity)
     }
 
     private var managerCard: some View {
@@ -409,7 +410,8 @@ struct MainDashboardView: View {
                 .buttonStyle(.plain)
             }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .frame(maxWidth: .infinity)
+        .frame(height: 50)
     }
 
     private var bottomBar: some View {

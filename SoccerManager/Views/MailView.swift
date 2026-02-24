@@ -23,6 +23,7 @@ struct MailView: View {
                 mailDetail
                     .frame(maxWidth: .infinity)
             }
+            .frame(maxHeight: .infinity)
         }
         .background(Color(red: 0.06, green: 0.08, blue: 0.1), ignoresSafeAreaEdges: .all)
     }
@@ -83,6 +84,7 @@ struct MailView: View {
         .padding(.horizontal, 16)
         .padding(.vertical, 8)
         .background(Color(white: 0.1))
+        .fixedSize(horizontal: false, vertical: true)
     }
 
     // MARK: - Mail List
