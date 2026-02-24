@@ -209,7 +209,7 @@ struct MainDashboardView: View {
         } label: {
             DashboardCard(title: "UPCOMING", icon: "calendar", accentColor: .blue, expandVertically: true) {
                 VStack(spacing: 4) {
-                    ForEach(Array(viewModel.upcomingFixtures.prefix(6))) { match in
+                    ForEach(Array(viewModel.upcomingFixtures.prefix(7))) { match in
                         HStack(spacing: 6) {
                             Text(matchDateString(match.date))
                                 .font(.system(size: 8))
