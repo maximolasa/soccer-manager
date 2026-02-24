@@ -204,7 +204,7 @@ struct MainDashboardView: View {
         } label: {
             DashboardCard(title: "UPCOMING", icon: "calendar", accentColor: .blue, expandVertically: true) {
                 VStack(spacing: 4) {
-                    ForEach(Array(viewModel.upcomingFixtures.prefix(5))) { match in
+                    ForEach(Array(viewModel.upcomingFixtures.prefix(6))) { match in
                         HStack(spacing: 6) {
                             Text(matchDateString(match.date))
                                 .font(.system(size: 8))
@@ -233,16 +233,21 @@ struct MainDashboardView: View {
     }
 
     private var teamInfoCard: some View {
-        DashboardCard(title: "TEAM", icon: "person.3.fill", accentColor: .cyan) {
-            if let club = viewModel.selectedClub {
-                VStack(spacing: 4) {
-                    infoRow("Squad Size", "\(viewModel.myPlayers.count)")
-                    infoRow("Formation", club.formation)
-                    infoRow("Rating", "\(club.rating)")
-                    infoRow("Stadium", club.stadiumName)
+        Button {
+            viewModel.currentScreen = .squad
+        } label: {
+            DashboardCard(title: "TEAM", icon: "person.3.fill", accentColor: .cyan) {
+                if let club = viewModel.selectedClub {
+                    VStack(spacing: 4) {
+                        infoRow("Squad Size", "\(viewModel.myPlayers.count)")
+                        infoRow("Formation", club.formation)
+                        infoRow("Rating", "\(club.rating)")
+                        infoRow("Stadium", club.stadiumName)
+                    }
                 }
             }
         }
+        .buttonStyle(.plain)
     }
 
     private var transfersCard: some View {

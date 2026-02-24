@@ -9,7 +9,11 @@ struct GameDataGenerator {
         "Pierre", "Antoine", "Hugo", "Paul", "Kylian", "Ousmane", "Adrien", "Theo",
         "Leon", "Kai", "Joshua", "Florian", "Jamal", "Leroy", "Niklas", "Timo",
         "Bruno", "Diogo", "Bernardo", "Ruben", "Joao", "Rafael", "Goncalo", "Pedro",
-        "Robin", "Memphis", "Frenkie", "Matthijs", "Ryan", "Cody", "Daley", "Virgil"
+        "Robin", "Memphis", "Frenkie", "Matthijs", "Ryan", "Cody", "Daley", "Virgil",
+        "Callum", "Connor", "Liam", "Noah", "Ben", "Sam", "Jake", "Alfie",
+        "Archie", "Tyler", "Nathan", "Reece", "Kyle", "Aaron", "Jordan", "Declan",
+        "Jude", "Bukayo", "Marcus", "Phil", "Cole", "Ebere", "Ivan", "Dominic",
+        "Ollie", "Rhys", "Ellis", "Kieffer", "Conor", "Brennan", "Louie", "Jayden"
     ]
 
     static let lastNames = [
@@ -20,7 +24,12 @@ struct GameDataGenerator {
         "Dupont", "Martin", "Bernard", "Dubois", "Thomas", "Robert", "Richard",
         "Mueller", "Schmidt", "Schneider", "Fischer", "Weber", "Wagner", "Becker",
         "Silva", "Santos", "Ferreira", "Oliveira", "Costa", "Rodrigues", "Almeida",
-        "De Jong", "Van Dijk", "De Ligt", "Bakker", "Visser", "Smit", "Meijer"
+        "De Jong", "Van Dijk", "De Ligt", "Bakker", "Visser", "Smit", "Meijer",
+        "Moore", "Thompson", "White", "Harris", "Green", "Baker", "King", "Hill",
+        "Adams", "Nelson", "Carter", "Mitchell", "Collins", "Turner", "Parker", "Edwards",
+        "Morris", "Cook", "Morgan", "Bell", "Murphy", "Bailey", "Cooper", "Ward",
+        "Cox", "Richardson", "Wood", "Watson", "Brooks", "Bennett", "Gray", "Hughes",
+        "Palmer", "Watkins", "Saka", "Rice", "Foden", "Gordon", "Gibbs", "Gallagher"
     ]
 
     static func generatePlayer(clubId: UUID?, position: PlayerPosition, quality: Int) -> Player {
@@ -121,6 +130,8 @@ struct GameDataGenerator {
         var players: [Player] = []
 
         let leagueDataList: [LeagueData] = [
+
+            // ─── ENGLAND TIER 1: PREMIER LEAGUE (20 teams) ────────────────────
             LeagueData(name: "Premier League", country: "England", emoji: "🏴󠁧󠁢󠁥󠁮󠁧󠁿", tier: 1, maxRating: 100, clubs: [
                 ("Manchester City", "MCI", 92, 200_000_000, "Etihad Stadium", 53400, "skyblue", "white"),
                 ("Arsenal", "ARS", 89, 150_000_000, "Emirates Stadium", 60704, "red", "white"),
@@ -135,14 +146,128 @@ struct GameDataGenerator {
                 ("Crystal Palace", "CRY", 72, 50_000_000, "Selhurst Park", 25486, "red", "blue"),
                 ("Fulham", "FUL", 71, 45_000_000, "Craven Cottage", 25700, "white", "black"),
                 ("Brentford", "BRE", 70, 40_000_000, "Brentford Stadium", 17250, "red", "white"),
-                ("Wolves", "WOL", 69, 45_000_000, "Molineux", 32050, "orange", "black"),
-                ("Bournemouth", "BOU", 68, 35_000_000, "Vitality Stadium", 11364, "red", "black"),
-                ("Nottm Forest", "NFO", 67, 40_000_000, "City Ground", 30332, "red", "white"),
-                ("Everton", "EVE", 66, 35_000_000, "Goodison Park", 39414, "blue", "white"),
-                ("Leicester City", "LEI", 65, 30_000_000, "King Power Stadium", 32261, "blue", "white"),
-                ("Ipswich Town", "IPS", 60, 20_000_000, "Portman Road", 30311, "blue", "white"),
-                ("Southampton", "SOU", 58, 25_000_000, "St Mary's Stadium", 32384, "red", "white"),
+                ("Wolves", "WOL", 70, 45_000_000, "Molineux", 32050, "orange", "black"),
+                ("Bournemouth", "BOU", 69, 35_000_000, "Vitality Stadium", 11364, "red", "black"),
+                ("Nottm Forest", "NFO", 69, 40_000_000, "City Ground", 30332, "red", "white"),
+                ("Everton", "EVE", 69, 35_000_000, "Goodison Park", 39414, "blue", "white"),
+                ("Leicester City", "LEI", 70, 30_000_000, "King Power Stadium", 32261, "blue", "white"),
+                ("Ipswich Town", "IPS", 69, 20_000_000, "Portman Road", 30311, "blue", "white"),
+                ("Southampton", "SOU", 69, 25_000_000, "St Mary's Stadium", 32384, "red", "white"),
             ]),
+
+            // ─── ENGLAND TIER 2: EFL CHAMPIONSHIP (24 teams) ──────────────────
+            LeagueData(name: "EFL Championship", country: "England", emoji: "🏴󠁧󠁢󠁥󠁮󠁧󠁿", tier: 2, maxRating: 80, clubs: [
+                ("Leeds United", "LEE", 74, 40_000_000, "Elland Road", 37890, "white", "yellow"),
+                ("Burnley", "BUR", 73, 35_000_000, "Turf Moor", 21944, "claret", "blue"),
+                ("Sheffield United", "SHU", 72, 30_000_000, "Bramall Lane", 32609, "red", "white"),
+                ("Luton Town", "LUT", 70, 20_000_000, "Kenilworth Road", 10356, "orange", "navy"),
+                ("Sunderland", "SUN", 70, 25_000_000, "Stadium of Light", 49000, "red", "white"),
+                ("Norwich City", "NOR", 69, 25_000_000, "Carrow Road", 27244, "yellow", "green"),
+                ("Middlesbrough", "MID", 68, 22_000_000, "Riverside Stadium", 34742, "red", "white"),
+                ("Coventry City", "COV", 67, 18_000_000, "Coventry Arena", 32609, "skyblue", "white"),
+                ("West Brom", "WBA", 67, 20_000_000, "The Hawthorns", 26850, "navy", "white"),
+                ("Watford", "WAT", 66, 20_000_000, "Vicarage Road", 22220, "yellow", "black"),
+                ("Stoke City", "STK", 66, 18_000_000, "bet365 Stadium", 30089, "red", "white"),
+                ("Swansea City", "SWA", 65, 15_000_000, "Swansea.com Stadium", 21088, "white", "black"),
+                ("Bristol City", "BRC", 64, 15_000_000, "Ashton Gate", 27000, "red", "white"),
+                ("Hull City", "HUL", 64, 14_000_000, "MKM Stadium", 25586, "orange", "black"),
+                ("Millwall", "MIL", 63, 12_000_000, "The Den", 20146, "blue", "white"),
+                ("QPR", "QPR", 62, 12_000_000, "Loftus Road", 18439, "blue", "white"),
+                ("Preston North End", "PNE", 62, 10_000_000, "Deepdale", 23404, "white", "navy"),
+                ("Blackburn Rovers", "BLB", 61, 10_000_000, "Ewood Park", 31367, "blue", "white"),
+                ("Cardiff City", "CAR", 61, 10_000_000, "Cardiff Stadium", 33280, "blue", "white"),
+                ("Sheffield Wed", "SHW", 60, 10_000_000, "Hillsborough", 39732, "blue", "white"),
+                ("Plymouth Argyle", "PLY", 60, 8_000_000, "Home Park", 18600, "green", "white"),
+                ("Birmingham City", "BIR", 60, 10_000_000, "St Andrew's", 29409, "blue", "white"),
+                ("Rotherham Utd", "ROT", 59, 6_000_000, "New York Stadium", 12021, "red", "white"),
+                ("Huddersfield", "HUD", 59, 8_000_000, "John Smith's Stadium", 24121, "blue", "white"),
+            ]),
+
+            // ─── ENGLAND TIER 3: EFL LEAGUE ONE (24 teams) ────────────────────
+            LeagueData(name: "EFL League One", country: "England", emoji: "🏴󠁧󠁢󠁥󠁮󠁧󠁿", tier: 3, maxRating: 65, clubs: [
+                ("Derby County", "DER", 64, 12_000_000, "Pride Park", 33597, "white", "black"),
+                ("Portsmouth", "POM", 63, 10_000_000, "Fratton Park", 20688, "blue", "white"),
+                ("Bolton Wanderers", "BOL", 62, 10_000_000, "Toughsheet Stadium", 28723, "white", "navy"),
+                ("Wigan Athletic", "WIG", 61, 8_000_000, "DW Stadium", 25138, "blue", "white"),
+                ("Barnsley", "BNS", 60, 7_000_000, "Oakwell", 23287, "red", "white"),
+                ("Charlton Athletic", "CHA", 59, 7_000_000, "The Valley", 27111, "red", "white"),
+                ("Reading", "REA", 58, 8_000_000, "Select Car Leasing Stadium", 24161, "blue", "white"),
+                ("Peterborough", "PET", 57, 6_000_000, "London Road", 15314, "blue", "white"),
+                ("Stockport County", "STO", 56, 5_000_000, "Edgeley Park", 10852, "blue", "white"),
+                ("Oxford United", "OXF", 56, 5_000_000, "Kassam Stadium", 12500, "yellow", "navy"),
+                ("Leyton Orient", "LEY", 55, 4_000_000, "Brisbane Road", 9271, "red", "white"),
+                ("Port Vale", "PTV", 54, 3_500_000, "Vale Park", 18947, "white", "black"),
+                ("Shrewsbury Town", "SHR", 53, 3_000_000, "Croud Meadow", 9875, "blue", "yellow"),
+                ("Cambridge Utd", "CMB", 52, 3_000_000, "Abbey Stadium", 8127, "yellow", "black"),
+                ("Lincoln City", "LIN", 52, 3_500_000, "LNER Stadium", 10120, "red", "white"),
+                ("Cheltenham Town", "CLT", 51, 2_500_000, "Jonny-Rocks Stadium", 7066, "red", "white"),
+                ("Fleetwood Town", "FLE", 50, 2_500_000, "Highbury Stadium", 5327, "red", "white"),
+                ("Burton Albion", "BUA", 50, 2_000_000, "Pirelli Stadium", 6912, "yellow", "black"),
+                ("Northampton", "NTH", 50, 3_000_000, "Sixfields Stadium", 7798, "claret", "white"),
+                ("Exeter City", "EXE", 49, 2_500_000, "St James Park", 8696, "red", "white"),
+                ("Stevenage", "STV", 49, 2_000_000, "Lamex Stadium", 7100, "red", "white"),
+                ("Wycombe", "WYC", 49, 2_500_000, "Adams Park", 10000, "navy", "skyblue"),
+                ("Bristol Rovers", "BRR", 48, 2_500_000, "Memorial Stadium", 11916, "blue", "white"),
+                ("Carlisle United", "CAL", 48, 2_000_000, "Brunton Park", 18202, "blue", "white"),
+            ]),
+
+            // ─── ENGLAND TIER 4: EFL LEAGUE TWO (24 teams) ────────────────────
+            LeagueData(name: "EFL League Two", country: "England", emoji: "🏴󠁧󠁢󠁥󠁮󠁧󠁿", tier: 4, maxRating: 60, clubs: [
+                ("Wrexham", "WRE", 56, 6_000_000, "Racecourse Ground", 10771, "red", "white"),
+                ("Mansfield Town", "MAN", 54, 3_500_000, "Field Mill", 9186, "yellow", "blue"),
+                ("MK Dons", "MKD", 53, 4_000_000, "Stadium MK", 30500, "white", "red"),
+                ("Bradford City", "BRA", 52, 3_000_000, "Valley Parade", 25136, "claret", "yellow"),
+                ("Notts County", "NTC", 51, 2_500_000, "Meadow Lane", 20211, "black", "white"),
+                ("Crewe Alexandra", "CRE", 50, 2_500_000, "Gresty Road", 10153, "red", "white"),
+                ("Doncaster Rovers", "DON", 50, 2_500_000, "Keepmoat Stadium", 15231, "red", "white"),
+                ("Gillingham", "GIL", 49, 2_000_000, "Priestfield Stadium", 11582, "blue", "white"),
+                ("Salford City", "SFD", 49, 3_000_000, "Peninsula Stadium", 5108, "red", "white"),
+                ("Tranmere Rovers", "TRA", 48, 2_000_000, "Prenton Park", 16567, "white", "blue"),
+                ("Swindon Town", "SWI", 48, 2_000_000, "County Ground", 15728, "red", "white"),
+                ("Walsall", "WAS", 47, 1_500_000, "Bescot Stadium", 11300, "red", "white"),
+                ("Grimsby Town", "GRI", 46, 1_500_000, "Blundell Park", 9052, "black", "white"),
+                ("Newport County", "NWP", 46, 1_500_000, "Rodney Parade", 8500, "yellow", "black"),
+                ("Crawley Town", "CRA", 45, 1_500_000, "Broadfield Stadium", 6134, "red", "white"),
+                ("Accrington", "ACC", 44, 1_200_000, "Wham Stadium", 5450, "red", "white"),
+                ("Harrogate Town", "HGT", 44, 1_200_000, "Wetherby Road", 5000, "yellow", "black"),
+                ("Colchester Utd", "COL", 43, 1_500_000, "JobServe Stadium", 10105, "blue", "white"),
+                ("AFC Wimbledon", "AFW", 43, 1_500_000, "Plough Lane", 9215, "blue", "yellow"),
+                ("Morecambe", "MOR", 42, 1_000_000, "Mazuma Stadium", 6476, "red", "white"),
+                ("Sutton United", "SUT", 41, 1_000_000, "VBS Community Stadium", 5013, "yellow", "green"),
+                ("Barrow", "BAW", 41, 1_000_000, "Holker Street", 5268, "blue", "white"),
+                ("Forest Green", "FGR", 40, 1_000_000, "New Lawn", 5147, "green", "black"),
+                ("Rochdale", "ROC", 42, 1_200_000, "Crown Oil Arena", 10249, "blue", "black"),
+            ]),
+
+            // ─── ENGLAND TIER 5: NATIONAL LEAGUE (24 teams) ───────────────────
+            LeagueData(name: "National League", country: "England", emoji: "🏴󠁧󠁢󠁥󠁮󠁧󠁿", tier: 5, maxRating: 52, clubs: [
+                ("Chesterfield", "CHF", 50, 2_000_000, "SMH Group Stadium", 10504, "blue", "white"),
+                ("Bromley", "BRM", 48, 900_000, "Hayes Lane", 5150, "white", "black"),
+                ("Solihull Moors", "SOL", 47, 1_000_000, "Damson Park", 3050, "yellow", "blue"),
+                ("York City", "YOR", 46, 1_200_000, "LNER Community Stadium", 8256, "red", "navy"),
+                ("Oldham Athletic", "OLD", 46, 1_500_000, "Boundary Park", 13624, "blue", "white"),
+                ("Southend United", "SEN", 45, 1_000_000, "Roots Hall", 12392, "blue", "white"),
+                ("Scunthorpe Utd", "SCU", 44, 900_000, "Glanford Park", 9183, "claret", "blue"),
+                ("Woking", "WOK", 44, 800_000, "Kingfield Stadium", 6036, "red", "white"),
+                ("Hartlepool Utd", "HRT", 43, 800_000, "Suit Direct Stadium", 7856, "blue", "white"),
+                ("Eastleigh", "EAS", 42, 700_000, "Silverlake Stadium", 5192, "blue", "white"),
+                ("Aldershot Town", "ALD", 42, 700_000, "EBB Stadium", 7100, "red", "blue"),
+                ("Halifax Town", "HAL", 41, 800_000, "The Shay", 10762, "blue", "white"),
+                ("Boreham Wood", "BOR", 40, 600_000, "Meadow Park", 4502, "white", "black"),
+                ("Barnet", "BNT", 40, 600_000, "The Hive", 6500, "orange", "black"),
+                ("Dagenham & Red", "DAG", 39, 600_000, "Victoria Road", 6078, "red", "blue"),
+                ("Gateshead", "GAT", 39, 500_000, "Gateshead Stadium", 11800, "white", "black"),
+                ("Maidenhead Utd", "MAI", 38, 500_000, "York Road", 4500, "black", "white"),
+                ("Wealdstone", "WEA", 37, 400_000, "Grosvenor Vale", 4070, "blue", "white"),
+                ("Altrincham", "ALT", 37, 500_000, "J.Davidson Stadium", 6085, "red", "white"),
+                ("Dorking Wand", "DOR", 36, 400_000, "Meadowbank", 3000, "red", "white"),
+                ("Torquay United", "TRQ", 35, 400_000, "Plainmoor", 6104, "yellow", "navy"),
+                ("Fylde", "FYL", 35, 400_000, "Mill Farm", 6000, "white", "red"),
+                ("Ebbsfleet Utd", "EBB", 34, 350_000, "Stonebridge Road", 4769, "red", "white"),
+                ("Kidderminster", "KID", 33, 350_000, "Aggborough", 6444, "red", "white"),
+            ]),
+
+            // ─── LA LIGA ──────────────────────────────────────────────────────
             LeagueData(name: "La Liga", country: "Spain", emoji: "🇪🇸", tier: 1, maxRating: 100, clubs: [
                 ("Real Madrid", "RMA", 93, 250_000_000, "Santiago Bernabeu", 81044, "white", "white"),
                 ("Barcelona", "BAR", 90, 180_000_000, "Camp Nou", 99354, "blue", "red"),
