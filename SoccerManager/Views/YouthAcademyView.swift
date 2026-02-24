@@ -7,138 +7,140 @@ struct YouthAcademyView: View {
         viewModel.myPlayers.filter { $0.age <= 21 }.sorted { $0.stats.overall > $1.stats.overall }
     }
 
+    private let bgColor = Color(red: 0.06, green: 0.08, blue: 0.1)
+    private let headerBg = Color(white: 0.1)
+
     var body: some View {
-        VStack(spacing: 0) {
-            Spacer().frame(height: 10)
-            headerBar
+        GeometryReader { geo in
+            ZStack {
+                bgColor.ignoresSafeArea()
 
-            ScrollView {
-                HStack(alignment: .top, spacing: 12) {
-                    academyUpgrades
-                    youthPlayersPanel
-                }
-                .padding(12)
-            }
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color(red: 0.06, green: 0.08, blue: 0.1).ignoresSafeArea())
-    }
+                VStack(spacing: 0) {
+                    // Header
+                    HStack {
+                        Button {
+                            viewModel.currentScreen = .dashboard
+                        } label: {
+                            HStack(spacing: 4) {
+                                Image(systemName: "chevron.left")
+                                Text("Back")
+                            }
+                            .font(.caption)
+                            .foregroundStyle(.green)
+                        }
 
-    private var headerBar: some View {
-        HStack {
-            Button {
-                viewModel.currentScreen = .dashboard
-            } label: {
-                HStack(spacing: 4) {
-                    Image(systemName: "chevron.left")
-                    Text("Back")
-                }
-                .font(.caption)
-                .foregroundStyle(.green)
-            }
+                        Spacer()
 
-            Spacer()
+                        Text("YOUTH ACADEMY")
+                            .font(.headline)
+                            .fontWeight(.black)
+                            .foregroundStyle(.white)
+                            .tracking(2)
 
-            Text("YOUTH ACADEMY")
-                .font(.headline)
-                .fontWeight(.black)
-                .foregroundStyle(.white)
-                .tracking(2)
+                        Spacer()
+                        Color.clear.frame(width: 50)
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                    .background(headerBg)
 
-            Spacer()
-            Color.clear.frame(width: 50)
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 14)
-        .background(Color(white: 0.1))
-        .fixedSize(horizontal: false, vertical: true)
-    }
+                    // Content
+                    HStack(alignment: .top, spacing: 12) {
+                        // Left: upgrade cards in a scroll
+                        ScrollView(.vertical, showsIndicators: false) {
+                            VStack(spacing: 10) {
+                                if let club = viewModel.selectedClub {
+                                    upgradeCard(
+                                        title: "Recruiting",
+                                        icon: "person.badge.plus",
+                                        level: club.academyRecruitingLevel,
+                                        description: "\(club.playersPerYear) players/year",
+                                        cost: club.academyRecruitingLevel * 2_000_000,
+                                        color: .green
+                                    ) {
+                                        _ = club.upgradeAcademy(.recruiting)
+                                    }
 
-    private var academyUpgrades: some View {
-        VStack(spacing: 10) {
-            if let club = viewModel.selectedClub {
-                upgradeCard(
-                    title: "Recruiting",
-                    icon: "person.badge.plus",
-                    level: club.academyRecruitingLevel,
-                    description: "\(club.playersPerYear) players/year",
-                    cost: club.academyRecruitingLevel * 2_000_000,
-                    color: .green
-                ) {
-                    _ = club.upgradeAcademy(.recruiting)
-                }
+                                    upgradeCard(
+                                        title: "Quality",
+                                        icon: "star.fill",
+                                        level: club.academyQualityLevel,
+                                        description: "Base quality: \(club.academyBaseQuality)",
+                                        cost: club.academyQualityLevel * 3_000_000,
+                                        color: .yellow
+                                    ) {
+                                        _ = club.upgradeAcademy(.quality)
+                                    }
 
-                upgradeCard(
-                    title: "Quality",
-                    icon: "star.fill",
-                    level: club.academyQualityLevel,
-                    description: "Base quality: \(club.academyBaseQuality)",
-                    cost: club.academyQualityLevel * 3_000_000,
-                    color: .yellow
-                ) {
-                    _ = club.upgradeAcademy(.quality)
-                }
+                                    upgradeCard(
+                                        title: "Training",
+                                        icon: "figure.run",
+                                        level: club.academyTrainingLevel,
+                                        description: String(format: "Boost: %.0f%%", (club.trainingBoost - 1) * 100),
+                                        cost: club.academyTrainingLevel * 2_500_000,
+                                        color: .cyan
+                                    ) {
+                                        _ = club.upgradeAcademy(.training)
+                                    }
+                                }
+                            }
+                            .frame(width: 200)
+                        }
 
-                upgradeCard(
-                    title: "Training",
-                    icon: "figure.run",
-                    level: club.academyTrainingLevel,
-                    description: String(format: "Boost: %.0f%%", (club.trainingBoost - 1) * 100),
-                    cost: club.academyTrainingLevel * 2_500_000,
-                    color: .cyan
-                ) {
-                    _ = club.upgradeAcademy(.training)
-                }
-            }
-        }
-        .frame(width: 200)
-    }
-
-    private var youthPlayersPanel: some View {
-        VStack(spacing: 0) {
-            HStack {
-                Text("YOUTH PLAYERS")
-                    .font(.system(size: 11, weight: .bold))
-                    .foregroundStyle(.purple)
-                    .tracking(1)
-                Spacer()
-                Text("\(youthPlayers.count) players (U21)")
-                    .font(.caption)
-                    .foregroundStyle(.white.opacity(0.4))
-            }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
-            .background(Color.white.opacity(0.03))
-
-            ScrollView {
-                LazyVStack(spacing: 0) {
-                    ForEach(youthPlayers) { player in
-                        HStack(spacing: 8) {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(player.fullName)
-                                    .font(.system(size: 12, weight: .medium))
-                                    .foregroundStyle(.white)
-                                Text("\(player.position.fullName) | Age \(player.age)")
-                                    .font(.system(size: 9))
+                        // Right: youth players
+                        VStack(spacing: 0) {
+                            HStack {
+                                Text("YOUTH PLAYERS")
+                                    .font(.system(size: 11, weight: .bold))
+                                    .foregroundStyle(.purple)
+                                    .tracking(1)
+                                Spacer()
+                                Text("\(youthPlayers.count) players (U21)")
+                                    .font(.caption)
                                     .foregroundStyle(.white.opacity(0.4))
                             }
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 8)
+                            .background(Color.white.opacity(0.03))
 
-                            Spacer()
+                            ScrollView {
+                                LazyVStack(spacing: 0) {
+                                    ForEach(youthPlayers) { player in
+                                        HStack(spacing: 8) {
+                                            VStack(alignment: .leading, spacing: 2) {
+                                                Text(player.fullName)
+                                                    .font(.system(size: 12, weight: .medium))
+                                                    .foregroundStyle(.white)
+                                                Text("\(player.position.fullName) | Age \(player.age)")
+                                                    .font(.system(size: 9))
+                                                    .foregroundStyle(.white.opacity(0.4))
+                                            }
 
-                            HStack(spacing: 8) {
-                                miniStatBadge("OVR", player.stats.overall, .green)
-                                miniStatBadge("POT", player.potentialPeak, .cyan)
+                                            Spacer()
+
+                                            HStack(spacing: 8) {
+                                                miniStatBadge("OVR", player.stats.overall, .green)
+                                                miniStatBadge("POT", player.potentialPeak, .cyan)
+                                            }
+                                        }
+                                        .padding(.horizontal, 12)
+                                        .padding(.vertical, 7)
+                                    }
+                                }
                             }
                         }
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 7)
+                        .background(Color.white.opacity(0.04))
+                        .clipShape(.rect(cornerRadius: 12))
                     }
+                    .padding(12)
                 }
+                .padding(.top, geo.safeAreaInsets.top)
             }
+            .ignoresSafeArea()
         }
-        .background(Color.white.opacity(0.04))
-        .clipShape(.rect(cornerRadius: 12))
     }
+
+    // MARK: - Components
 
     private func upgradeCard(title: String, icon: String, level: Int, description: String, cost: Int, color: Color, action: @escaping () -> Void) -> some View {
         VStack(spacing: 8) {
