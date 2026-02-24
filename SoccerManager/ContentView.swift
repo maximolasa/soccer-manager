@@ -32,6 +32,8 @@ struct ContentView: View {
                 RivalSquadView(viewModel: viewModel)
             case .managerStats:
                 ManagerStatsView(viewModel: viewModel)
+            case .mail:
+                MailView(viewModel: viewModel)
             }
         }
         .preferredColorScheme(.dark)

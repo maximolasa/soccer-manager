@@ -99,7 +99,7 @@ struct MainDashboardView: View {
 
     private var rightColumn: some View {
         VStack(spacing: 10) {
-            managerCard
+            mailCard
             quickActionsGrid
             newsCard
         }
@@ -294,6 +294,51 @@ struct MainDashboardView: View {
         .frame(maxHeight: .infinity)
     }
 
+    private var mailCard: some View {
+        Button {
+            viewModel.currentScreen = .mail
+        } label: {
+            DashboardCard(title: "MAIL", icon: "envelope.fill", accentColor: .orange) {
+                VStack(spacing: 3) {
+                    if viewModel.mailMessages.isEmpty {
+                        Text("No mail")
+                            .font(.system(size: 10))
+                            .foregroundStyle(.white.opacity(0.3))
+                    } else {
+                        ForEach(Array(viewModel.mailMessages.prefix(3))) { mail in
+                            HStack(spacing: 6) {
+                                Circle()
+                                    .fill(mail.isRead ? Color.clear : Color.orange)
+                                    .frame(width: 5, height: 5)
+                                Image(systemName: mail.category.icon)
+                                    .font(.system(size: 8))
+                                    .foregroundStyle(mail.isRead ? .white.opacity(0.3) : .orange)
+                                Text(mail.subject)
+                                    .font(.system(size: 9, weight: mail.isRead ? .regular : .bold))
+                                    .foregroundStyle(mail.isRead ? .white.opacity(0.4) : .white)
+                                    .lineLimit(1)
+                                Spacer()
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        .buttonStyle(.plain)
+        .overlay(alignment: .topTrailing) {
+            if viewModel.unreadMailCount > 0 {
+                Text("\(viewModel.unreadMailCount)")
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 5)
+                    .padding(.vertical, 2)
+                    .background(Color.red)
+                    .clipShape(.capsule)
+                    .offset(x: -6, y: 6)
+            }
+        }
+    }
+
     private var managerCard: some View {
         Button {
             viewModel.currentScreen = .managerStats
@@ -311,8 +356,8 @@ struct MainDashboardView: View {
 
     private var quickActionsGrid: some View {
         LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
-            quickActionButton("Squad", icon: "person.3.fill", color: .cyan) {
-                viewModel.currentScreen = .squad
+            quickActionButton("Manager", icon: "person.fill", color: .purple) {
+                viewModel.currentScreen = .managerStats
             }
             quickActionButton("Tactics", icon: "arrow.triangle.branch", color: .orange) {
                 viewModel.currentScreen = .tactics

@@ -15,6 +15,7 @@ nonisolated enum GameScreen: Sendable {
     case matchResult
     case rivalSquad
     case managerStats
+    case mail
 }
 
 nonisolated enum TransferWindowStatus: Sendable {
@@ -49,6 +50,16 @@ class GameViewModel {
     var seasonYear: Int = 2025
     var managerLeagueTitles: Int = 0
     var managerCupWins: Int = 0
+    var mailMessages: [MailMessage] = []
+
+    var unreadMailCount: Int {
+        mailMessages.filter { !$0.isRead }.count
+    }
+
+    func sendMail(subject: String, body: String, category: MailCategory = .general) {
+        let mail = MailMessage(date: currentDate, subject: subject, body: body, category: category)
+        mailMessages.insert(mail, at: 0)
+    }
 
     // ── Lazy generation tracking ──
     /// Leagues that get full simulation (player's league + same-country adjacent tiers)
@@ -155,9 +166,7 @@ class GameViewModel {
         generateSeasonSchedule()
         initializeStandings()
         generateFreeAgents()
-        currentScreen = .dashboard
-        newsMessages = ["You've been appointed as the new manager! Good luck!"]
-    }
+        currentScreen = .dashboard\n        newsMessages = [\"You've been appointed as the new manager! Good luck!\"]\n\n        if let club = selectedClub {\n            let leagueName = leagues.first { $0.id == club.leagueId }?.name ?? \"the league\"\n            sendMail(\n                subject: \"Welcome to \\(club.name)!\",\n                body: \"Congratulations on your appointment as the new manager of \\(club.name). The board expects a strong performance in \\(leagueName) this season. Your transfer budget is \\(formatCurrency(club.budget)). Good luck!\",\n                category: .board\n            )\n        }\n    }
 
     func initializeStandings() {
         standings = [:]
@@ -491,6 +500,18 @@ class GameViewModel {
             if let p = pool.randomElement() {
                 let minute = Int.random(in: 10...85)
                 events.append(MatchEvent(minute: minute, type: .injury, playerName: p.fullName, isHome: isHome))
+                // Apply actual injury to the player
+                p.isInjured = true
+                p.injuryWeeksLeft = Int.random(in: 1...6)
+                // Mail notification if it's our player
+                if p.clubId == selectedClubId {
+                    let oppName = isHome ? (awayClub?.name ?? "opponent") : (homeClub?.name ?? "opponent")
+                    sendMail(
+                        subject: "\u{1F534} \(p.fullName) injured in match",
+                        body: "\(p.fullName) was injured during the match against \(oppName) in minute \(minute). He will be out for \(p.injuryWeeksLeft) week\(p.injuryWeeksLeft > 1 ? "s" : "").",
+                        category: .injury
+                    )
+                }
             }
         }
 
@@ -693,7 +714,11 @@ class GameViewModel {
             player.age = Int.random(in: 16...19)
             player.contractYearsLeft = 3
             players.append(player)
-            newsMessages.insert("Youth academy produced: \(player.fullName) (\(player.position.rawValue), \(player.stats.overall) OVR)", at: 0)
+            sendMail(
+                subject: "⭐ New youth talent: \(player.fullName)",
+                body: "The youth academy has produced \(player.fullName), a \(player.position.fullName) rated \(player.stats.overall) OVR. He has been added to your squad.",
+                category: .youth
+            )
         }
     }
 
@@ -705,13 +730,21 @@ class GameViewModel {
                 player.injuryWeeksLeft -= 1
                 if player.injuryWeeksLeft <= 0 {
                     player.isInjured = false
-                    newsMessages.insert("\(player.fullName) has recovered from injury!", at: 0)
+                    sendMail(
+                        subject: "🟢 \(player.fullName) recovered",
+                        body: "\(player.fullName) has fully recovered from his injury and is available for selection.",
+                        category: .injury
+                    )
                 }
             } else {
                 if Double.random(in: 0...1) < 0.02 {
                     player.isInjured = true
                     player.injuryWeeksLeft = Int.random(in: 1...8)
-                    newsMessages.insert("\(player.fullName) is injured for \(player.injuryWeeksLeft) weeks!", at: 0)
+                    sendMail(
+                        subject: "🔴 \(player.fullName) injured",
+                        body: "\(player.fullName) has picked up an injury during training and will be out for \(player.injuryWeeksLeft) week\(player.injuryWeeksLeft > 1 ? "s" : "").",
+                        category: .injury
+                    )
                 }
             }
         }
@@ -726,7 +759,11 @@ class GameViewModel {
         }
         player.clubId = selectedClubId
         player.contractYearsLeft = Int.random(in: 2...5)
-        newsMessages.insert("Signed \(player.fullName) for \(formatCurrency(fee))!", at: 0)
+        sendMail(
+            subject: "✅ Transfer complete: \(player.fullName)",
+            body: "You have signed \(player.fullName) (\(player.position.rawValue), \(player.stats.overall) OVR) for \(formatCurrency(fee)). Contract: \(player.contractYearsLeft) years.",
+            category: .transfer
+        )
         return true
     }
 
@@ -741,12 +778,22 @@ class GameViewModel {
             player.clubId = nil
         }
         newsMessages.insert("Sold \(player.fullName) for \(formatCurrency(fee))!", at: 0)
+        sendMail(
+            subject: "\(player.fullName) sold",
+            body: "You have sold \(player.fullName) for \(formatCurrency(fee)). The funds have been added to your transfer budget.",
+            category: .transfer
+        )
     }
 
     func releasePlayer(_ player: Player) {
         player.clubId = nil
         player.contractYearsLeft = 0
         newsMessages.insert("Released \(player.fullName) as a free agent.", at: 0)
+        sendMail(
+            subject: "\(player.fullName) released",
+            body: "\(player.fullName) has been released from the squad and is now a free agent.",
+            category: .transfer
+        )
     }
 
     func signFreeAgent(_ player: Player, wage: Int) -> Bool {
@@ -755,6 +802,11 @@ class GameViewModel {
         player.contractYearsLeft = Int.random(in: 1...3)
         player.wage = wage
         newsMessages.insert("Signed free agent \(player.fullName)!", at: 0)
+        sendMail(
+            subject: "\u2705 Free agent signed: \(player.fullName)",
+            body: "You have signed free agent \(player.fullName) (\(player.position.rawValue), \(player.stats.overall) OVR) on a \(player.contractYearsLeft)-year contract at \(formatCurrency(wage))/week.",
+            category: .transfer
+        )
         return true
     }
 
