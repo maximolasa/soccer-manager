@@ -50,6 +50,12 @@ class GameViewModel {
     var managerLeagueTitles: Int = 0
     var managerCupWins: Int = 0
 
+    // ── Lazy generation tracking ──
+    /// Leagues that get full simulation (player's league + same-country adjacent tiers)
+    var activeLeagueIds: Set<UUID> = []
+    /// Clubs whose squads have already been generated
+    var clubsWithSquads: Set<UUID> = []
+
     var selectedClub: Club? {
         clubs.first { $0.id == selectedClubId }
     }
@@ -71,6 +77,7 @@ class GameViewModel {
 
     var rivalPlayers: [Player] {
         guard let rivalId = rivalClubId else { return [] }
+        ensureSquadGenerated(for: rivalId)
         return players.filter { $0.clubId == rivalId }
     }
 
@@ -142,6 +149,8 @@ class GameViewModel {
 
     func startNewGame(clubId: UUID) {
         selectedClubId = clubId
+        computeActiveLeagueIds()
+        generateActiveSquads()
         generateFriendlies()
         generateSeasonSchedule()
         initializeStandings()
@@ -159,9 +168,18 @@ class GameViewModel {
     }
 
     func generateFreeAgents() {
+        // Scale free-agent quality to the player's league tier
+        let playerLeague = leagues.first(where: { league in
+            clubs.first(where: { $0.id == selectedClubId })?.leagueId == league.id
+        })
+        let tier = playerLeague?.tier ?? 1
+        // Tier 1: 30-70, Tier 2: 25-60, Tier 3: 22-52, Tier 4: 20-45, Tier 5: 18-40
+        let qualityLow = max(18, 30 - (tier - 1) * 5)
+        let qualityHigh = max(40, 70 - (tier - 1) * 10)
+
         for _ in 0..<40 {
             let pos = PlayerPosition.allCases.randomElement()!
-            let quality = Int.random(in: 30...70)
+            let quality = Int.random(in: qualityLow...qualityHigh)
             let player = GameDataGenerator.generatePlayer(clubId: nil, position: pos, quality: quality)
             player.contractYearsLeft = 0
             players.append(player)
@@ -489,7 +507,11 @@ class GameViewModel {
             && cal.isDate($0.date, inSameDayAs: currentDate)
         }
         for match in todayAIMatches {
-            simulateMatch(match)
+            if isActiveMatch(match) {
+                simulateMatch(match)
+            } else {
+                simulateMatchLightweight(match)
+            }
         }
 
         // Weekly events (every 7 days)
@@ -536,7 +558,11 @@ class GameViewModel {
             && cal.isDate($0.date, inSameDayAs: match.date)
         }
         for m in sameDayMatches {
-            simulateMatch(m)
+            if isActiveMatch(m) {
+                simulateMatch(m)
+            } else {
+                simulateMatchLightweight(m)
+            }
         }
 
         currentScreen = .matchResult
@@ -553,7 +579,11 @@ class GameViewModel {
                 && cal.isDate($0.date, inSameDayAs: match.date)
             }
             for m in sameDayMatches {
-                simulateMatch(m)
+                if isActiveMatch(m) {
+                    simulateMatch(m)
+                } else {
+                    simulateMatchLightweight(m)
+                }
             }
         }
         currentMatch = nil
@@ -682,9 +712,76 @@ class GameViewModel {
     }
 
     func initializeGame() {
-        let (generatedLeagues, generatedClubs, generatedPlayers) = GameDataGenerator.createAllLeagues()
+        let (generatedLeagues, generatedClubs) = GameDataGenerator.createAllLeagues()
         leagues = generatedLeagues
         clubs = generatedClubs
-        players = generatedPlayers
+    }
+
+    // MARK: - Lazy Generation
+
+    /// Determine which leagues are "active" (full simulation with squads).
+    /// Active = player's league + same-country leagues with adjacent tiers.
+    func computeActiveLeagueIds() {
+        activeLeagueIds = []
+        guard let club = clubs.first(where: { $0.id == selectedClubId }),
+              let playerLeague = leagues.first(where: { $0.id == club.leagueId }) else { return }
+
+        let country = playerLeague.country
+        let tier = playerLeague.tier
+
+        for league in leagues {
+            if league.country == country && abs(league.tier - tier) <= 1 {
+                activeLeagueIds.insert(league.id)
+            }
+        }
+    }
+
+    /// Generate squads for all clubs in active leagues.
+    func generateActiveSquads() {
+        for league in leagues where activeLeagueIds.contains(league.id) {
+            let leagueClubs = clubs.filter { $0.leagueId == league.id }
+            for club in leagueClubs {
+                ensureSquadGenerated(for: club.id)
+            }
+        }
+    }
+
+    /// On-demand squad generation. Only generates once per club.
+    func ensureSquadGenerated(for clubId: UUID) {
+        guard !clubsWithSquads.contains(clubId) else { return }
+        clubsWithSquads.insert(clubId)
+
+        guard let club = clubs.first(where: { $0.id == clubId }) else { return }
+        let quality = club.rating - 10
+        let squad = GameDataGenerator.generateSquad(clubId: club.id, quality: quality)
+        players.append(contentsOf: squad)
+    }
+
+    /// Check if a match belongs to an active league (needing full sim).
+    func isActiveMatch(_ match: Match) -> Bool {
+        guard let leagueId = match.leagueId else { return true } // friendlies/cups always full
+        return activeLeagueIds.contains(leagueId)
+    }
+
+    /// Lightweight simulation: score-only from club ratings, no events/player stats.
+    func simulateMatchLightweight(_ match: Match) {
+        let homeClub = clubs.first { $0.id == match.homeClubId }
+        let awayClub = clubs.first { $0.id == match.awayClubId }
+        let homeRating = Double(homeClub?.rating ?? 50)
+        let awayRating = Double(awayClub?.rating ?? 50)
+
+        let homeStrength = homeRating + Double.random(in: -15...15) + 3
+        let awayStrength = awayRating + Double.random(in: -15...15)
+
+        let homeExpectedGoals = max(0, (homeStrength - 30) / 20)
+        let awayExpectedGoals = max(0, (awayStrength - 30) / 20)
+
+        match.homeScore = poissonRandom(lambda: homeExpectedGoals)
+        match.awayScore = poissonRandom(lambda: awayExpectedGoals)
+        match.isPlayed = true
+
+        if match.matchType == .league, let leagueId = match.leagueId {
+            updateStandings(leagueId: leagueId, match: match)
+        }
     }
 }

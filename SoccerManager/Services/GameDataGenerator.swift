@@ -124,10 +124,9 @@ struct GameDataGenerator {
         let clubs: [(name: String, shortName: String, rating: Int, budget: Int, stadium: String, capacity: Int, primary: String, secondary: String)]
     }
 
-    static func createAllLeagues() -> ([League], [Club], [Player]) {
+    static func createAllLeagues() -> ([League], [Club]) {
         var leagues: [League] = []
         var clubs: [Club] = []
-        var players: [Player] = []
 
         let leagueDataList: [LeagueData] = [
 
@@ -290,6 +289,34 @@ struct GameDataGenerator {
                 ("Granada", "GRA", 57, 10_000_000, "Los Carmenes", 22524, "red", "white"),
                 ("Almeria", "ALM", 55, 8_000_000, "Power Horse", 15200, "red", "white"),
             ]),
+
+            // ─── LA LIGA 2 (SEGUNDA DIVISIÓN) ────────────────────────────────
+            LeagueData(name: "La Liga 2", country: "Spain", emoji: "🇪🇸", tier: 2, maxRating: 72, clubs: [
+                ("Levante", "LEV", 66, 15_000_000, "Ciutat de Valencia", 25354, "blue", "red"),
+                ("Real Valladolid", "VLL", 64, 12_000_000, "Jose Zorrilla", 26512, "purple", "white"),
+                ("Eibar", "EIB", 63, 10_000_000, "Ipurua", 8164, "blue", "red"),
+                ("Sporting Gijon", "SGI", 62, 10_000_000, "El Molinon", 30000, "red", "white"),
+                ("Racing Santander", "RAC", 61, 8_000_000, "El Sardinero", 22222, "green", "white"),
+                ("Real Zaragoza", "ZAR", 62, 10_000_000, "La Romareda", 34596, "blue", "white"),
+                ("Real Oviedo", "OVI", 61, 9_000_000, "Carlos Tartiere", 30500, "blue", "white"),
+                ("Tenerife", "TEN", 60, 8_000_000, "Heliodoro Rodriguez", 22824, "blue", "white"),
+                ("Huesca", "HUE", 59, 6_000_000, "El Alcoraz", 7638, "blue", "red"),
+                ("Leganes", "LEG", 60, 8_000_000, "Butarque", 12454, "blue", "white"),
+                ("Elche", "ELC", 59, 7_000_000, "Martinez Valero", 33732, "green", "white"),
+                ("Albacete", "ALB", 57, 5_000_000, "Carlos Belmonte", 17300, "white", "red"),
+                ("Burgos", "BUR", 56, 4_000_000, "El Plantio", 12200, "black", "white"),
+                ("Mirandes", "MIR", 55, 3_500_000, "Anduva", 5766, "red", "black"),
+                ("Villarreal B", "VIB", 56, 5_000_000, "Mini Estadi", 6000, "yellow", "blue"),
+                ("Cartagena", "CAR", 56, 4_000_000, "Cartagonova", 15105, "white", "black"),
+                ("Andorra", "AND", 55, 3_000_000, "Nacional", 3306, "blue", "yellow"),
+                ("Ponferradina", "PON", 54, 3_000_000, "El Toralin", 9762, "blue", "white"),
+                ("Amorebieta", "AMO", 53, 2_500_000, "Urritxe", 4000, "blue", "white"),
+                ("Alcorcon", "ALC", 53, 2_500_000, "Santo Domingo", 5100, "yellow", "blue"),
+                ("Eldense", "ELD", 52, 2_000_000, "Nuevo Pepico Amat", 6420, "blue", "white"),
+                ("Ferrol", "FER", 52, 2_000_000, "A Malata", 10500, "green", "white"),
+            ]),
+
+            // ─── SERIE A ─────────────────────────────────────────────────────
             LeagueData(name: "Serie A", country: "Italy", emoji: "🇮🇹", tier: 1, maxRating: 100, clubs: [
                 ("Inter Milan", "INT", 88, 140_000_000, "San Siro", 75923, "blue", "black"),
                 ("AC Milan", "MIL", 83, 120_000_000, "San Siro", 75923, "red", "black"),
@@ -312,6 +339,32 @@ struct GameDataGenerator {
                 ("Frosinone", "FRO", 56, 8_000_000, "Benito Stirpe", 16227, "yellow", "blue"),
                 ("Salernitana", "SAL", 54, 8_000_000, "Arechi", 37245, "maroon", "white"),
             ]),
+
+            // ─── SERIE B ─────────────────────────────────────────────────────
+            LeagueData(name: "Serie B", country: "Italy", emoji: "🇮🇹", tier: 2, maxRating: 70, clubs: [
+                ("Parma", "PAR", 67, 18_000_000, "Ennio Tardini", 27906, "yellow", "blue"),
+                ("Como", "COM", 65, 12_000_000, "Giuseppe Sinigaglia", 13602, "blue", "white"),
+                ("Venezia", "VEN", 64, 12_000_000, "Pier Luigi Penzo", 11150, "black", "green"),
+                ("Cremonese", "CRE", 63, 10_000_000, "Giovanni Zini", 20641, "red", "white"),
+                ("Palermo", "PAL", 64, 14_000_000, "Renzo Barbera", 36349, "pink", "black"),
+                ("Sampdoria", "SAM", 62, 10_000_000, "Luigi Ferraris", 36536, "blue", "white"),
+                ("Catanzaro", "CTZ", 60, 5_000_000, "Nicola Ceravolo", 19787, "yellow", "red"),
+                ("Brescia", "BRE", 61, 8_000_000, "Mario Rigamonti", 19066, "blue", "white"),
+                ("Bari", "BRI", 62, 8_000_000, "San Nicola", 58270, "white", "red"),
+                ("Modena", "MOD", 59, 5_000_000, "Alberto Braglia", 21151, "yellow", "blue"),
+                ("Spezia", "SPE", 60, 7_000_000, "Alberto Picco", 10336, "white", "black"),
+                ("Pisa", "PIS", 61, 7_000_000, "Arena Garibaldi", 12067, "blue", "black"),
+                ("Reggiana", "REG", 58, 4_000_000, "Mapei Stadium", 21525, "maroon", "white"),
+                ("Sudtirol", "SUD", 57, 3_500_000, "Druso", 5000, "red", "white"),
+                ("Ascoli", "ASC", 57, 4_000_000, "Cino e Lillo Del Duca", 20396, "white", "black"),
+                ("Cittadella", "CIT", 56, 3_000_000, "Tombolato", 7623, "red", "blue"),
+                ("Ternana", "TER", 55, 3_000_000, "Libero Liberati", 22500, "red", "green"),
+                ("Cosenza", "COS", 55, 2_500_000, "San Vito", 24479, "red", "blue"),
+                ("Feralpisalo", "FER", 54, 2_000_000, "Lino Turina", 4500, "blue", "green"),
+                ("Perugia", "PER", 56, 4_000_000, "Renato Curi", 28000, "red", "white"),
+            ]),
+
+            // ─── BUNDESLIGA ──────────────────────────────────────────────────
             LeagueData(name: "Bundesliga", country: "Germany", emoji: "🇩🇪", tier: 1, maxRating: 100, clubs: [
                 ("Bayern Munich", "BAY", 91, 200_000_000, "Allianz Arena", 75024, "red", "white"),
                 ("Borussia Dortmund", "BVB", 84, 100_000_000, "Signal Iduna Park", 81365, "yellow", "black"),
@@ -332,6 +385,30 @@ struct GameDataGenerator {
                 ("Bochum", "BOC", 60, 12_000_000, "Vonovia Ruhrstadion", 27599, "blue", "white"),
                 ("Darmstadt", "D98", 55, 8_000_000, "Merck-Stadion", 17000, "blue", "white"),
             ]),
+
+            // ─── 2. BUNDESLIGA ───────────────────────────────────────────────
+            LeagueData(name: "2. Bundesliga", country: "Germany", emoji: "🇩🇪", tier: 2, maxRating: 72, clubs: [
+                ("Hamburg", "HSV", 68, 20_000_000, "Volksparkstadion", 57000, "blue", "white"),
+                ("Schalke 04", "S04", 66, 18_000_000, "Veltins-Arena", 62271, "blue", "white"),
+                ("Hertha Berlin", "BSC", 65, 15_000_000, "Olympiastadion", 74475, "blue", "white"),
+                ("Hannover 96", "H96", 64, 12_000_000, "Heinz von Heiden Arena", 49200, "green", "white"),
+                ("Fortuna Dusseldorf", "F95", 63, 10_000_000, "Merkur Spiel-Arena", 54600, "red", "white"),
+                ("Nurnberg", "FCN", 63, 10_000_000, "Max-Morlock-Stadion", 50000, "red", "white"),
+                ("Kaiserslautern", "FCK", 62, 8_000_000, "Fritz-Walter-Stadion", 49780, "red", "white"),
+                ("Paderborn", "SCP", 61, 7_000_000, "Home Deluxe Arena", 15000, "blue", "black"),
+                ("Greuther Furth", "SGF", 60, 6_000_000, "Sportpark Ronhof", 18000, "green", "white"),
+                ("St. Pauli", "STP", 64, 10_000_000, "Millerntor-Stadion", 29546, "maroon", "white"),
+                ("Braunschweig", "BSG", 59, 5_000_000, "Eintracht-Stadion", 25540, "blue", "yellow"),
+                ("Rostock", "FCR", 58, 4_000_000, "Ostseestadion", 29000, "blue", "white"),
+                ("Elversberg", "SVE", 58, 3_500_000, "Ursapharm-Arena", 6800, "yellow", "blue"),
+                ("Magdeburg", "FCM", 59, 4_000_000, "MDCC-Arena", 30098, "blue", "white"),
+                ("Karlsruher", "KSC", 60, 5_000_000, "BBBank Wildpark", 34302, "blue", "white"),
+                ("Wiesbaden", "SVW", 57, 3_000_000, "Brita-Arena", 12566, "red", "black"),
+                ("Osnabruck", "VFO", 56, 3_000_000, "Bremer Brucke", 16100, "purple", "white"),
+                ("Sandhausen", "SVS", 55, 2_500_000, "BWT-Stadion", 15414, "black", "white"),
+            ]),
+
+            // ─── LIGUE 1 ─────────────────────────────────────────────────────
             LeagueData(name: "Ligue 1", country: "France", emoji: "🇫🇷", tier: 1, maxRating: 100, clubs: [
                 ("Paris Saint-Germain", "PSG", 89, 250_000_000, "Parc des Princes", 47929, "blue", "red"),
                 ("Marseille", "OM", 79, 60_000_000, "Velodrome", 67394, "white", "blue"),
@@ -352,23 +429,27 @@ struct GameDataGenerator {
                 ("Lorient", "FCL", 57, 10_000_000, "Moustoir", 18500, "orange", "black"),
                 ("Clermont", "CF63", 56, 8_000_000, "Gabriel-Montpied", 12000, "red", "blue"),
             ]),
-            LeagueData(name: "Liga Portugal", country: "Portugal", emoji: "🇵🇹", tier: 1, maxRating: 90, clubs: [
-                ("Benfica", "SLB", 83, 80_000_000, "Estadio da Luz", 64642, "red", "white"),
-                ("Porto", "FCP", 82, 75_000_000, "Dragao", 50033, "blue", "white"),
-                ("Sporting CP", "SCP", 81, 70_000_000, "Jose Alvalade", 50095, "green", "white"),
-                ("Braga", "SCB", 74, 35_000_000, "Municipal de Braga", 30286, "red", "white"),
-                ("Vitoria Guimaraes", "VSC", 67, 15_000_000, "D. Afonso Henriques", 30029, "white", "black"),
-                ("Gil Vicente", "GIL", 60, 8_000_000, "Cidade de Barcelos", 12504, "red", "white"),
-                ("Boavista", "BFC", 62, 10_000_000, "Bessa", 28263, "black", "white"),
-                ("Rio Ave", "RAF", 61, 8_000_000, "Rio Ave FC Stadium", 12815, "green", "white"),
-                ("Famalicao", "FCF", 63, 10_000_000, "Municipal de Famalicao", 5307, "blue", "white"),
-                ("Casa Pia", "CPA", 60, 7_000_000, "Nacional Stadium", 37593, "white", "black"),
-                ("Arouca", "FCA", 58, 6_000_000, "Municipal de Arouca", 5600, "yellow", "black"),
-                ("Estoril", "EST", 59, 6_000_000, "Antonio Coimbra", 8015, "yellow", "blue"),
-                ("Moreirense", "MFC", 58, 5_000_000, "Parque Desportivo", 6153, "green", "white"),
-                ("Vizela", "FCV", 56, 5_000_000, "Estadio do Vizela", 6238, "blue", "white"),
-                ("Portimonense", "POR", 55, 5_000_000, "Municipal de Portimao", 9543, "black", "white"),
-                ("Estrela Amadora", "EAM", 54, 4_000_000, "Jose Gomes", 9288, "red", "white"),
+
+            // ─── LIGUE 2 ─────────────────────────────────────────────────────
+            LeagueData(name: "Ligue 2", country: "France", emoji: "🇫🇷", tier: 2, maxRating: 68, clubs: [
+                ("Saint-Etienne", "STE", 64, 12_000_000, "Geoffroy-Guichard", 41965, "green", "white"),
+                ("Bordeaux", "BOR", 62, 10_000_000, "Matmut Atlantique", 42115, "navy", "white"),
+                ("Caen", "SMC", 61, 8_000_000, "Michel d'Ornano", 21500, "blue", "red"),
+                ("Auxerre", "AJA", 62, 8_000_000, "Abbe-Deschamps", 23467, "white", "blue"),
+                ("Guingamp", "EAG", 60, 6_000_000, "Roudourou", 18214, "red", "black"),
+                ("Paris FC", "PFC", 59, 5_000_000, "Charlety", 20000, "blue", "white"),
+                ("Sochaux", "FCS", 58, 5_000_000, "Auguste Bonal", 20005, "yellow", "blue"),
+                ("Bastia", "SCB", 58, 4_000_000, "Armand Cesari", 16480, "blue", "white"),
+                ("Amiens", "ASC", 59, 5_000_000, "Licorne", 12097, "white", "black"),
+                ("Rodez", "RAF", 57, 3_000_000, "Paul Lignon", 6000, "red", "yellow"),
+                ("Pau FC", "PAU", 56, 3_000_000, "Nouste Camp", 4974, "yellow", "blue"),
+                ("Troyes", "EST", 58, 4_500_000, "Aube", 21684, "blue", "white"),
+                ("Valenciennes", "VAF", 55, 3_000_000, "Hainaut", 25172, "red", "white"),
+                ("Laval", "STL", 56, 3_000_000, "Francis Le Basser", 17893, "orange", "black"),
+                ("Grenoble", "GF3", 57, 3_500_000, "Stade des Alpes", 20068, "blue", "white"),
+                ("Quevilly Rouen", "QRM", 55, 2_500_000, "Robert Diochon", 12018, "red", "yellow"),
+                ("Ajaccio", "ACA", 55, 3_000_000, "Francois Coty", 10660, "red", "white"),
+                ("Annecy", "FCA", 54, 2_000_000, "Parc des Sports", 15000, "red", "blue"),
             ]),
         ]
 
@@ -397,13 +478,9 @@ struct GameDataGenerator {
                     countryEmoji: data.emoji
                 )
                 clubs.append(club)
-
-                let quality = clubData.rating - 10
-                let squad = generateSquad(clubId: club.id, quality: quality)
-                players.append(contentsOf: squad)
             }
         }
 
-        return (leagues, clubs, players)
+        return (leagues, clubs)
     }
 }

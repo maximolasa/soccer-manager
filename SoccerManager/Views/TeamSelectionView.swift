@@ -2,8 +2,27 @@ import SwiftUI
 
 struct TeamSelectionView: View {
     @State var viewModel: GameViewModel
+    @State private var selectedCountry: String?
     @State private var selectedLeague: League?
     @State private var searchText: String = ""
+
+    var countries: [(name: String, emoji: String)] {
+        var seen = Set<String>()
+        var result: [(name: String, emoji: String)] = []
+        for league in viewModel.leagues {
+            if seen.insert(league.country).inserted {
+                result.append((name: league.country, emoji: league.countryEmoji))
+            }
+        }
+        return result
+    }
+
+    var countryLeagues: [League] {
+        guard let country = selectedCountry else { return [] }
+        return viewModel.leagues
+            .filter { $0.country == country }
+            .sorted { $0.tier < $1.tier }
+    }
 
     var filteredClubs: [Club] {
         guard let league = selectedLeague else { return [] }
@@ -51,41 +70,86 @@ struct TeamSelectionView: View {
     private var leagueSidebar: some View {
         ScrollView {
             VStack(spacing: 2) {
-                ForEach(viewModel.leagues) { league in
-                    Button {
-                        withAnimation(.spring(duration: 0.3)) {
-                            selectedLeague = league
-                        }
-                    } label: {
-                        HStack(spacing: 8) {
-                            Text(league.countryEmoji)
-                                .font(.title3)
-                            VStack(alignment: .leading, spacing: 1) {
-                                Text(league.name)
-                                    .font(.caption)
-                                    .fontWeight(.semibold)
-                                    .lineLimit(1)
-                                Text(league.country)
-                                    .font(.caption2)
-                                    .foregroundStyle(.secondary)
+                ForEach(countries, id: \.name) { country in
+                    VStack(spacing: 0) {
+                        Button {
+                            withAnimation(.spring(duration: 0.3)) {
+                                if selectedCountry == country.name {
+                                    selectedCountry = nil
+                                    selectedLeague = nil
+                                } else {
+                                    selectedCountry = country.name
+                                    selectedLeague = nil
+                                }
                             }
-                            Spacer()
+                        } label: {
+                            HStack(spacing: 8) {
+                                Text(country.emoji)
+                                    .font(.title3)
+                                Text(country.name)
+                                    .font(.caption)
+                                    .fontWeight(.bold)
+                                    .foregroundStyle(.white)
+                                Spacer()
+                                Image(systemName: selectedCountry == country.name ? "chevron.down" : "chevron.right")
+                                    .font(.caption2)
+                                    .foregroundStyle(.white.opacity(0.4))
+                            }
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 10)
+                            .background(
+                                selectedCountry == country.name
+                                ? Color.green.opacity(0.15)
+                                : Color.white.opacity(0.05)
+                            )
+                            .clipShape(.rect(cornerRadius: 8))
                         }
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 8)
-                        .background(
-                            selectedLeague?.id == league.id
-                            ? Color.green.opacity(0.2)
-                            : Color.white.opacity(0.05)
-                        )
-                        .clipShape(.rect(cornerRadius: 8))
+                        .buttonStyle(.plain)
+
+                        if selectedCountry == country.name {
+                            VStack(spacing: 2) {
+                                ForEach(countryLeagues) { league in
+                                    Button {
+                                        withAnimation(.spring(duration: 0.3)) {
+                                            selectedLeague = league
+                                        }
+                                    } label: {
+                                        HStack(spacing: 6) {
+                                            RoundedRectangle(cornerRadius: 2)
+                                                .fill(selectedLeague?.id == league.id ? Color.green : Color.white.opacity(0.15))
+                                                .frame(width: 3, height: 20)
+                                            VStack(alignment: .leading, spacing: 1) {
+                                                Text(league.name)
+                                                    .font(.caption)
+                                                    .fontWeight(.semibold)
+                                                    .lineLimit(1)
+                                                Text("Tier \(league.tier)")
+                                                    .font(.system(size: 9))
+                                                    .foregroundStyle(.secondary)
+                                            }
+                                            Spacer()
+                                        }
+                                        .padding(.horizontal, 10)
+                                        .padding(.vertical, 6)
+                                        .background(
+                                            selectedLeague?.id == league.id
+                                            ? Color.green.opacity(0.2)
+                                            : Color.clear
+                                        )
+                                        .clipShape(.rect(cornerRadius: 6))
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                            }
+                            .padding(.leading, 16)
+                            .padding(.top, 2)
+                        }
                     }
-                    .buttonStyle(.plain)
                 }
             }
             .padding(8)
         }
-        .frame(width: 180)
+        .frame(width: 200)
         .background(Color(white: 0.08))
     }
 
