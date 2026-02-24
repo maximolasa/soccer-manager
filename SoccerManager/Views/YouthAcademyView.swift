@@ -8,16 +8,18 @@ struct YouthAcademyView: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            headerBar
+        ZStack {
+            Color(red: 0.06, green: 0.08, blue: 0.1).ignoresSafeArea()
+            VStack(spacing: 0) {
+                headerBar
 
-            HStack(spacing: 12) {
-                academyUpgrades
-                youthPlayersPanel
+                HStack(spacing: 12) {
+                    academyUpgrades
+                    youthPlayersPanel
+                }
+                .padding(12)
             }
-            .padding(12)
         }
-        .background(Color(red: 0.06, green: 0.08, blue: 0.1), ignoresSafeAreaEdges: .all)
     }
 
     private var headerBar: some View {

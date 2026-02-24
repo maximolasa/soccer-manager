@@ -103,7 +103,9 @@ struct MatchResultView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color(red: 0.04, green: 0.06, blue: 0.08), ignoresSafeAreaEdges: .all)
+        .background {
+            Color(red: 0.04, green: 0.06, blue: 0.08).ignoresSafeArea()
+        }
     }
 
     private func clubBadge(_ name: String) -> some View {

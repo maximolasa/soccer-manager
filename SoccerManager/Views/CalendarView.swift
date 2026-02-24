@@ -20,12 +20,14 @@ struct CalendarView: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            headerBar
-            filterBar
-            fixtureList
+        ZStack {
+            Color(red: 0.06, green: 0.08, blue: 0.1).ignoresSafeArea()
+            VStack(spacing: 0) {
+                headerBar
+                filterBar
+                fixtureList
+            }
         }
-        .background(Color(red: 0.06, green: 0.08, blue: 0.1), ignoresSafeAreaEdges: .all)
     }
 
     private var headerBar: some View {

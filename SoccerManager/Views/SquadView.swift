@@ -76,6 +76,7 @@ struct SquadView: View {
 
     var body: some View {
         ZStack {
+            Color(red: 0.06, green: 0.08, blue: 0.1).ignoresSafeArea()
             VStack(spacing: 0) {
                 headerBar
                 filtersBar
@@ -87,7 +88,6 @@ struct SquadView: View {
                 playerDetailOverlay(player)
             }
         }
-        .background(Color(red: 0.06, green: 0.08, blue: 0.1), ignoresSafeAreaEdges: .all)
     }
 
     private var headerBar: some View {

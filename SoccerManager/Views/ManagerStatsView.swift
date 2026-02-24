@@ -65,22 +65,24 @@ struct ManagerStatsView: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            headerBar
+        ZStack {
+            Color(red: 0.06, green: 0.08, blue: 0.1).ignoresSafeArea()
+            VStack(spacing: 0) {
+                headerBar
 
-            ScrollView {
-                VStack(spacing: 12) {
-                    overviewSection
-                    recordSection
-                    formSection
-                    topScorersSection
-                    topAssistersSection
-                    squadOverviewSection
+                ScrollView {
+                    VStack(spacing: 12) {
+                        overviewSection
+                        recordSection
+                        formSection
+                        topScorersSection
+                        topAssistersSection
+                        squadOverviewSection
+                    }
+                    .padding(16)
                 }
-                .padding(16)
             }
         }
-        .background(Color(red: 0.06, green: 0.08, blue: 0.1), ignoresSafeAreaEdges: .all)
     }
 
     private var headerBar: some View {

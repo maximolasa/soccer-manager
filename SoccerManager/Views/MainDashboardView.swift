@@ -10,17 +10,19 @@ struct MainDashboardView: View {
     }()
 
     var body: some View {
-        VStack(spacing: 0) {
-            topBar
-            HStack(spacing: 12) {
-                leftColumn
-                centerColumn
-                rightColumn
+        ZStack {
+            Color(red: 0.06, green: 0.08, blue: 0.1).ignoresSafeArea()
+            VStack(spacing: 0) {
+                topBar
+                HStack(spacing: 12) {
+                    leftColumn
+                    centerColumn
+                    rightColumn
+                }
+                .padding(12)
+                .frame(maxHeight: .infinity)
             }
-            .padding(12)
-            .frame(maxHeight: .infinity)
         }
-        .background(Color(red: 0.06, green: 0.08, blue: 0.1), ignoresSafeAreaEdges: .all)
     }
 
     private var topBar: some View {
@@ -77,7 +79,6 @@ struct MainDashboardView: View {
         }
         .padding(.horizontal, 24)
         .padding(.vertical, 10)
-        .padding(.top, 4)
         .background(Color(white: 0.1))
         .fixedSize(horizontal: false, vertical: true)
     }
