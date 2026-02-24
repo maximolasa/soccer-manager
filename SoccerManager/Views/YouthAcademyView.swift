@@ -9,6 +9,7 @@ struct YouthAcademyView: View {
 
     var body: some View {
         VStack(spacing: 0) {
+            Spacer().frame(height: 10)
             headerBar
 
             HStack(spacing: 12) {
