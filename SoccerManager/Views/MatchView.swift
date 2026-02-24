@@ -450,11 +450,18 @@ struct MatchView: View {
                 let newEvents = pendingEvents.filter { $0.minute == minute }
                 for event in newEvents {
                     displayedEvents.append(event)
-                    if event.type == .goal {
+                    if event.type == .goal || event.type == .penalty {
                         if event.isHome {
                             displayedHomeScore += 1
                         } else {
                             displayedAwayScore += 1
+                        }
+                    } else if event.type == .ownGoal {
+                        // Own goal by home player → away scores, and vice versa
+                        if event.isHome {
+                            displayedAwayScore += 1
+                        } else {
+                            displayedHomeScore += 1
                         }
                     }
                 }
@@ -508,32 +515,25 @@ struct MatchView: View {
     }
 
     private func eventRow(_ event: MatchEvent, match: Match) -> some View {
-        HStack(spacing: 8) {
+        let label: String = {
+            switch event.type {
+            case .ownGoal:     return "\(event.playerName) (OG)"
+            case .penalty:     return "\(event.playerName) (pen)"
+            case .penaltyMiss: return "\(event.playerName) (pen miss)"
+            default:           return event.playerName
+            }
+        }()
+
+        return HStack(spacing: 8) {
             if event.isHome {
-                Spacer()
-                VStack(alignment: .trailing, spacing: 1) {
-                    Text(event.playerName)
-                        .font(.system(size: 10, weight: .semibold))
-                        .foregroundStyle(.white)
-                    if let assist = event.assistPlayerName {
-                        Text("Assist: \(assist)")
-                            .font(.system(size: 8))
-                            .foregroundStyle(.white.opacity(0.4))
-                    }
-                }
-                eventIcon(event.type)
-                Text("\(event.minute)'")
-                    .font(.system(size: 10, weight: .bold, design: .monospaced))
-                    .foregroundStyle(.white.opacity(0.5))
-                    .frame(width: 30)
-            } else {
+                // Home events on the LEFT (same side as home team name)
                 Text("\(event.minute)'")
                     .font(.system(size: 10, weight: .bold, design: .monospaced))
                     .foregroundStyle(.white.opacity(0.5))
                     .frame(width: 30)
                 eventIcon(event.type)
                 VStack(alignment: .leading, spacing: 1) {
-                    Text(event.playerName)
+                    Text(label)
                         .font(.system(size: 10, weight: .semibold))
                         .foregroundStyle(.white)
                     if let assist = event.assistPlayerName {
@@ -543,6 +543,24 @@ struct MatchView: View {
                     }
                 }
                 Spacer()
+            } else {
+                // Away events on the RIGHT
+                Spacer()
+                VStack(alignment: .trailing, spacing: 1) {
+                    Text(label)
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(.white)
+                    if let assist = event.assistPlayerName {
+                        Text("Assist: \(assist)")
+                            .font(.system(size: 8))
+                            .foregroundStyle(.white.opacity(0.4))
+                    }
+                }
+                eventIcon(event.type)
+                Text("\(event.minute)'")
+                    .font(.system(size: 10, weight: .bold, design: .monospaced))
+                    .foregroundStyle(.white.opacity(0.5))
+                    .frame(width: 30)
             }
         }
         .padding(.horizontal, 8)

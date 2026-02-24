@@ -32,12 +32,12 @@ struct GameDataGenerator {
         "Palmer", "Watkins", "Saka", "Rice", "Foden", "Gordon", "Gibbs", "Gallagher"
     ]
 
-    static func generatePlayer(clubId: UUID?, position: PlayerPosition, quality: Int) -> Player {
+    static func generatePlayer(clubId: UUID?, position: PlayerPosition, quality: Int, variance: Int = 12) -> Player {
         let firstName = firstNames.randomElement()!
         let lastName = lastNames.randomElement()!
         let age = Int.random(in: 17...35)
-        let variance = Int.random(in: -12...12)
-        let overall = max(25, min(99, quality + variance))
+        let v = Int.random(in: -variance...variance)
+        let overall = max(25, min(99, quality + v))
 
         let offensive: Int
         let defensive: Int
@@ -93,25 +93,68 @@ struct GameDataGenerator {
         return player
     }
 
-    static func generateSquad(clubId: UUID, quality: Int) -> [Player] {
-        var players: [Player] = []
-        let positions: [(PlayerPosition, Int)] = [
-            (.goalkeeper, 2),
-            (.centerBack, 4),
-            (.leftBack, 2),
-            (.rightBack, 2),
-            (.defensiveMidfield, 2),
-            (.centralMidfield, 3),
-            (.attackingMidfield, 2),
-            (.leftWing, 2),
-            (.rightWing, 2),
-            (.striker, 3)
+    /// Generate 24 player ratings following EA FC 25 squad distribution.
+    /// Top 15 average ≈ clubRating. Stars above, reserves/youth well below.
+    static func eaSquadRatings(clubRating: Int) -> [Int] {
+        let offsets: [(Int, Int)] = [
+            (5, 9),     // 1  – Star
+            (3, 7),     // 2
+            (2, 5),     // 3
+            (1, 4),     // 4
+            (0, 3),     // 5
+            (-1, 2),    // 6
+            (-2, 1),    // 7
+            (-3, 0),    // 8
+            (-3, -1),   // 9
+            (-4, -1),   // 10
+            (-5, -2),   // 11
+            (-5, -3),   // 12
+            (-6, -3),   // 13
+            (-7, -4),   // 14
+            (-8, -5),   // 15
+            (-14, -9),  // 16 – Subs
+            (-16, -11), // 17
+            (-18, -13), // 18
+            (-20, -15), // 19
+            (-22, -17), // 20
+            (-25, -19), // 21 – Reserves / Youth
+            (-27, -21), // 22
+            (-29, -23), // 23
+            (-32, -25), // 24
         ]
-        for (pos, count) in positions {
-            for _ in 0..<count {
-                players.append(generatePlayer(clubId: clubId, position: pos, quality: quality))
-            }
+
+        var ratings = offsets.map { (lo, hi) in
+            max(25, min(99, clubRating + Int.random(in: lo...hi)))
         }
+        ratings.sort(by: >)
+        return ratings
+    }
+
+    static func generateSquad(clubId: UUID, clubRating: Int) -> [Player] {
+        let ratings = eaSquadRatings(clubRating: clubRating)
+        var players: [Player] = []
+
+        let positions: [PlayerPosition] = [
+            .goalkeeper, .goalkeeper,
+            .centerBack, .centerBack, .centerBack, .centerBack,
+            .leftBack, .leftBack,
+            .rightBack, .rightBack,
+            .defensiveMidfield, .defensiveMidfield,
+            .centralMidfield, .centralMidfield, .centralMidfield,
+            .attackingMidfield, .attackingMidfield,
+            .leftWing, .leftWing,
+            .rightWing, .rightWing,
+            .striker, .striker, .striker
+        ]
+
+        let shuffledPositions = positions.shuffled()
+
+        for i in 0..<24 {
+            let pos = shuffledPositions[i]
+            // variance: 2 keeps EA ratings tight; position-stat variance is still applied
+            players.append(generatePlayer(clubId: clubId, position: pos, quality: ratings[i], variance: 2))
+        }
+
         return players
     }
 

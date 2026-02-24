@@ -52,8 +52,8 @@ struct MatchResultView: View {
 
                     HStack(spacing: 24) {
                         VStack(alignment: .trailing, spacing: 4) {
-                            ForEach(match.events.filter { $0.isHome && $0.type == .goal }) { event in
-                                Text("\(event.playerName) \(event.minute)'")
+                            ForEach(homeGoalEvents(match)) { event in
+                                Text("\(goalLabel(event)) \(event.minute)'")
                                     .font(.system(size: 10))
                                     .foregroundStyle(.white.opacity(0.6))
                             }
@@ -64,8 +64,8 @@ struct MatchResultView: View {
                             .foregroundStyle(.white.opacity(0.2))
 
                         VStack(alignment: .leading, spacing: 4) {
-                            ForEach(match.events.filter { !$0.isHome && $0.type == .goal }) { event in
-                                Text("\(event.minute)' \(event.playerName)")
+                            ForEach(awayGoalEvents(match)) { event in
+                                Text("\(event.minute)' \(goalLabel(event))")
                                     .font(.system(size: 10))
                                     .foregroundStyle(.white.opacity(0.6))
                             }
@@ -130,6 +130,29 @@ struct MatchResultView: View {
             Text(label)
                 .font(.system(size: 9))
                 .foregroundStyle(.white.opacity(0.4))
+        }
+    }
+
+    // Goals + penalties by the team, plus own goals by the opponent
+    private func homeGoalEvents(_ match: Match) -> [MatchEvent] {
+        match.events.filter {
+            ($0.isHome && ($0.type == .goal || $0.type == .penalty)) ||
+            (!$0.isHome && $0.type == .ownGoal)
+        }
+    }
+
+    private func awayGoalEvents(_ match: Match) -> [MatchEvent] {
+        match.events.filter {
+            (!$0.isHome && ($0.type == .goal || $0.type == .penalty)) ||
+            ($0.isHome && $0.type == .ownGoal)
+        }
+    }
+
+    private func goalLabel(_ event: MatchEvent) -> String {
+        switch event.type {
+        case .penalty:  return "\(event.playerName) (pen)"
+        case .ownGoal:  return "\(event.playerName) (OG)"
+        default:        return event.playerName
         }
     }
 }

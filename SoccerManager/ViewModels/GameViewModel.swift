@@ -188,7 +188,20 @@ class GameViewModel {
 
     func generateFriendlies() {
         guard let clubId = selectedClubId, let club = selectedClub else { return }
-        let opponents = clubs.filter { $0.id != clubId }.shuffled().prefix(3)
+        let playerLeague = leagues.first { $0.id == club.leagueId }
+        let playerCountry = playerLeague?.country ?? ""
+        let isArgentine = playerCountry == "Argentina"
+
+        let eligible = clubs.filter { c in
+            guard c.id != clubId else { return false }
+            // Rating within ±25
+            guard abs(c.rating - club.rating) <= 25 else { return false }
+            // Argentina only plays vs Argentina, rest only vs rest
+            let cLeague = leagues.first { $0.id == c.leagueId }
+            let cIsArgentine = cLeague?.country == "Argentina"
+            return isArgentine == cIsArgentine
+        }
+        let opponents = eligible.shuffled().prefix(3)
         var date = currentDate
         for opponent in opponents {
             date = Calendar.current.date(byAdding: .day, value: 7, to: date)!
@@ -352,98 +365,160 @@ class GameViewModel {
     func simulateMatch(_ match: Match, updateStandingsNow: Bool = true) {
         let homeClub = clubs.first { $0.id == match.homeClubId }
         let awayClub = clubs.first { $0.id == match.awayClubId }
-        let homeRating = Double(homeClub?.rating ?? 50)
-        let awayRating = Double(awayClub?.rating ?? 50)
 
-        let homePlayers = players.filter { $0.clubId == match.homeClubId && !$0.isInjured }
-        let awayPlayers = players.filter { $0.clubId == match.awayClubId && !$0.isInjured }
+        let allHome = players.filter { $0.clubId == match.homeClubId && !$0.isInjured }
+        let allAway = players.filter { $0.clubId == match.awayClubId && !$0.isInjured }
 
-        let homeStrength = homeRating + Double.random(in: -15...15) + 3
-        let awayStrength = awayRating + Double.random(in: -15...15)
+        let homeXI = pickBestXI(from: allHome)
+        let awayXI = pickBestXI(from: allAway)
 
-        let totalStrength = max(homeStrength + awayStrength, 1.0)
-        match.homePossession = min(100, max(0, Int(homeStrength / totalStrength * 100)))
+        // ── Tactical modifiers ──
+        let homeTac = tacticalModifiers(for: homeClub)
+        let awayTac = tacticalModifiers(for: awayClub)
+
+        // ── Team strengths from actual player stats ──
+        let homeAttack  = weightedAttack(homeXI)
+        let homeDefense = weightedDefense(homeXI)
+        let homeMid     = weightedMidfield(homeXI)
+        let awayAttack  = weightedAttack(awayXI)
+        let awayDefense = weightedDefense(awayXI)
+        let awayMid     = weightedMidfield(awayXI)
+
+        // ── Possession ──
+        let homeMidPower = homeMid + homeTac.possessionBonus + Double.random(in: -4...4)
+        let awayMidPower = awayMid + awayTac.possessionBonus + Double.random(in: -4...4)
+        let totalMid = max(homeMidPower + awayMidPower, 1.0)
+        match.homePossession = min(70, max(30, Int(homeMidPower / totalMid * 100)))
         match.awayPossession = 100 - match.homePossession
 
-        let homeExpectedGoals = max(0, (homeStrength - 30) / 20)
-        let awayExpectedGoals = max(0, (awayStrength - 30) / 20)
+        // ── Expected goals (xG) ──
+        let homeXG = computeXG(
+            attack: homeAttack,
+            oppDefense: awayDefense + awayTac.defenseBonus,
+            possession: Double(match.homePossession),
+            xgBonus: homeTac.xgBonus,
+            isHome: true
+        )
+        let awayXG = computeXG(
+            attack: awayAttack,
+            oppDefense: homeDefense + homeTac.defenseBonus,
+            possession: Double(match.awayPossession),
+            xgBonus: awayTac.xgBonus,
+            isHome: false
+        )
 
-        match.homeShots = Int.random(in: 5...20)
-        match.awayShots = Int.random(in: 5...20)
-        match.homeShotsOnTarget = Int.random(in: 2...match.homeShots)
-        match.awayShotsOnTarget = Int.random(in: 2...match.awayShots)
+        // ── Shots ──
+        match.homeShots = max(2, Int(homeXG * 5.5 + Double.random(in: 2...5) + homeTac.shotsBonus))
+        match.awayShots = max(2, Int(awayXG * 5.5 + Double.random(in: 2...5) + awayTac.shotsBonus))
+        let homeAcc = min(0.7, 0.3 + homeAttack / 250.0 + Double.random(in: -0.05...0.1))
+        let awayAcc = min(0.7, 0.3 + awayAttack / 250.0 + Double.random(in: -0.05...0.1))
+        match.homeShotsOnTarget = max(0, min(match.homeShots, Int(Double(match.homeShots) * homeAcc)))
+        match.awayShotsOnTarget = max(0, min(match.awayShots, Int(Double(match.awayShots) * awayAcc)))
+
+        // ── Goals ──
+        let homeGoals = poissonRandom(lambda: homeXG)
+        let awayGoals = poissonRandom(lambda: awayXG)
 
         var events: [MatchEvent] = []
 
-        let homeGoals = poissonRandom(lambda: homeExpectedGoals)
-        let awayGoals = poissonRandom(lambda: awayExpectedGoals)
-
         for _ in 0..<homeGoals {
             let minute = Int.random(in: 1...90)
-            let scorerName = homePlayers.filter { $0.position.isForward || $0.position.isMidfielder }.randomElement()?.fullName
-                ?? homePlayers.randomElement()?.fullName ?? "Unknown"
-            let assistName = homePlayers.filter { $0.fullName != scorerName }.randomElement()?.fullName
-            events.append(MatchEvent(minute: minute, type: .goal, playerName: scorerName, isHome: true, assistPlayerName: assistName))
+            let scorer = weightedScorer(from: homeXI)
+            let assist = weightedAssist(from: homeXI, excludingId: scorer.id)
+            events.append(MatchEvent(minute: minute, type: .goal, playerName: scorer.fullName, isHome: true, assistPlayerName: assist?.fullName))
             match.homeScore += 1
-
-            if let scorer = homePlayers.first(where: { $0.fullName == scorerName }) {
-                scorer.goals += 1
-                scorer.matchesPlayed += 1
-            }
-            if let assister = homePlayers.first(where: { $0.fullName == assistName }) {
-                assister.assists += 1
-            }
+            scorer.goals += 1
+            assist?.assists += 1
         }
 
         for _ in 0..<awayGoals {
             let minute = Int.random(in: 1...90)
-            let scorerName = awayPlayers.filter { $0.position.isForward || $0.position.isMidfielder }.randomElement()?.fullName
-                ?? awayPlayers.randomElement()?.fullName ?? "Unknown"
-            let assistName = awayPlayers.filter { $0.fullName != scorerName }.randomElement()?.fullName
-            events.append(MatchEvent(minute: minute, type: .goal, playerName: scorerName, isHome: false, assistPlayerName: assistName))
+            let scorer = weightedScorer(from: awayXI)
+            let assist = weightedAssist(from: awayXI, excludingId: scorer.id)
+            events.append(MatchEvent(minute: minute, type: .goal, playerName: scorer.fullName, isHome: false, assistPlayerName: assist?.fullName))
             match.awayScore += 1
+            scorer.goals += 1
+            assist?.assists += 1
+        }
 
-            if let scorer = awayPlayers.first(where: { $0.fullName == scorerName }) {
-                scorer.goals += 1
-                scorer.matchesPlayed += 1
-            }
-            if let assister = awayPlayers.first(where: { $0.fullName == assistName }) {
-                assister.assists += 1
+        // ── Penalty (~8 %) ──
+        if Double.random(in: 0...1) < 0.08 {
+            let isHome = Bool.random()
+            let xi = isHome ? homeXI : awayXI
+            let minute = Int.random(in: 25...88)
+            if let taker = xi.filter({ $0.position.isForward || $0.position == .attackingMidfield })
+                .max(by: { $0.stats.offensive < $1.stats.offensive }) ?? xi.randomElement() {
+                if Double.random(in: 0...1) < 0.76 {
+                    events.append(MatchEvent(minute: minute, type: .penalty, playerName: taker.fullName, isHome: isHome))
+                    if isHome { match.homeScore += 1 } else { match.awayScore += 1 }
+                    taker.goals += 1
+                } else {
+                    events.append(MatchEvent(minute: minute, type: .penaltyMiss, playerName: taker.fullName, isHome: isHome))
+                }
             }
         }
 
-        let cardCount = Int.random(in: 0...6)
+        // ── Own goal (~3 %) ──
+        if Double.random(in: 0...1) < 0.03 {
+            let isHome = Bool.random()
+            let xi = isHome ? homeXI : awayXI
+            let minute = Int.random(in: 1...90)
+            if let p = xi.filter({ $0.position.isDefender }).randomElement() ?? xi.randomElement() {
+                events.append(MatchEvent(minute: minute, type: .ownGoal, playerName: p.fullName, isHome: isHome))
+                // Own goal counts for other team
+                if isHome { match.awayScore += 1 } else { match.homeScore += 1 }
+            }
+        }
+
+        // ── Cards (influenced by pressing & tempo) ──
+        let cardBase = 2.5 * (homeTac.cardMultiplier + awayTac.cardMultiplier) / 2.0
+        let cardCount = poissonRandom(lambda: cardBase)
         for _ in 0..<cardCount {
             let isHome = Bool.random()
-            let pool = isHome ? homePlayers : awayPlayers
+            let pool = isHome ? homeXI : awayXI
             guard let p = pool.randomElement() else { continue }
             let minute = Int.random(in: 1...90)
-            let isRed = Double.random(in: 0...1) < 0.05
+            let isRed = Double.random(in: 0...1) < 0.04
             events.append(MatchEvent(minute: minute, type: isRed ? .redCard : .yellowCard, playerName: p.fullName, isHome: isHome))
             if isRed { p.redCards += 1 } else { p.yellowCards += 1 }
+        }
+
+        // ── In-match injury ──
+        let injuryChance = 0.06 + homeTac.injuryBonus + awayTac.injuryBonus
+        if Double.random(in: 0...1) < injuryChance {
+            let isHome = Bool.random()
+            let pool = isHome ? homeXI : awayXI
+            if let p = pool.randomElement() {
+                let minute = Int.random(in: 10...85)
+                events.append(MatchEvent(minute: minute, type: .injury, playerName: p.fullName, isHome: isHome))
+            }
         }
 
         match.events = events.sorted { $0.minute < $1.minute }
         match.isPlayed = true
 
-        // Generate persisted player ratings
+        // ── Player match ratings ──
         var ratings: [UUID: Double] = [:]
-        for player in homePlayers.prefix(11) {
-            let baseRating = Double(player.stats.overall) / 15.0 + 3.0
-            ratings[player.id] = min(10.0, max(1.0, baseRating + Double.random(in: -1.5...1.5)))
+        for player in homeXI {
+            let base = Double(player.stats.overall) / 15.0 + 3.0
+            let goalBonus = Double(events.filter { $0.isHome && ($0.type == .goal || $0.type == .penalty) && $0.playerName == player.fullName }.count) * 0.8
+            let assistBonus = Double(events.filter { $0.isHome && $0.assistPlayerName == player.fullName }.count) * 0.4
+            let resultBonus: Double = match.homeScore > match.awayScore ? 0.3 : (match.homeScore < match.awayScore ? -0.3 : 0)
+            ratings[player.id] = min(10.0, max(1.0, base + goalBonus + assistBonus + resultBonus + Double.random(in: -1.0...1.0)))
         }
-        for player in awayPlayers.prefix(11) {
-            let baseRating = Double(player.stats.overall) / 15.0 + 3.0
-            ratings[player.id] = min(10.0, max(1.0, baseRating + Double.random(in: -1.5...1.5)))
-        }
-        // Boost scorers' ratings
-        for event in match.events where event.type == .goal {
-            let scorerPool = event.isHome ? homePlayers : awayPlayers
-            if let scorer = scorerPool.first(where: { $0.fullName == event.playerName }) {
-                ratings[scorer.id] = min(10.0, (ratings[scorer.id] ?? 7.0) + 0.5)
-            }
+        for player in awayXI {
+            let base = Double(player.stats.overall) / 15.0 + 3.0
+            let goalBonus = Double(events.filter { !$0.isHome && ($0.type == .goal || $0.type == .penalty) && $0.playerName == player.fullName }.count) * 0.8
+            let assistBonus = Double(events.filter { !$0.isHome && $0.assistPlayerName == player.fullName }.count) * 0.4
+            let resultBonus: Double = match.awayScore > match.homeScore ? 0.3 : (match.awayScore < match.homeScore ? -0.3 : 0)
+            ratings[player.id] = min(10.0, max(1.0, base + goalBonus + assistBonus + resultBonus + Double.random(in: -1.0...1.0)))
         }
         match.playerRatings = ratings
+
+        // Matches played – once per player per match
+        for player in homeXI + awayXI {
+            player.matchesPlayed += 1
+        }
 
         if updateStandingsNow, match.matchType == .league, let leagueId = match.leagueId {
             updateStandings(leagueId: leagueId, match: match)
@@ -692,6 +767,182 @@ class GameViewModel {
         return "\(amount)"
     }
 
+    // MARK: - Simulation Helpers
+
+    /// Tactical modifiers derived from club settings (mentality, tempo, pressing, width)
+    struct TacticalModifiers {
+        var xgBonus: Double = 0.0
+        var defenseBonus: Double = 0.0
+        var possessionBonus: Double = 0.0
+        var shotsBonus: Double = 0.0
+        var cardMultiplier: Double = 1.0
+        var injuryBonus: Double = 0.0
+    }
+
+    private func tacticalModifiers(for club: Club?) -> TacticalModifiers {
+        var m = TacticalModifiers()
+        guard let club else { return m }
+
+        switch club.mentality {
+        case "Attacking":  m.xgBonus += 0.3;  m.defenseBonus -= 8;  m.shotsBonus += 2
+        case "Defensive":  m.xgBonus -= 0.25; m.defenseBonus += 8;  m.shotsBonus -= 2
+        default: break
+        }
+        switch club.tempo {
+        case "Fast":  m.xgBonus += 0.1;  m.shotsBonus += 2; m.cardMultiplier *= 1.2
+        case "Slow":  m.xgBonus -= 0.1;  m.possessionBonus += 3; m.cardMultiplier *= 0.8
+        default: break
+        }
+        switch club.pressing {
+        case "High": m.xgBonus += 0.15; m.possessionBonus += 5; m.cardMultiplier *= 1.15; m.injuryBonus += 0.04
+        case "Low":  m.xgBonus -= 0.1;  m.possessionBonus -= 5; m.cardMultiplier *= 0.9
+        default: break
+        }
+        switch club.playWidth {
+        case "Wide":   m.shotsBonus += 1
+        case "Narrow": m.possessionBonus += 3
+        default: break
+        }
+        return m
+    }
+
+    /// Pick best 11: 1 GK + top 10 outfield by overall
+    private func pickBestXI(from pool: [Player]) -> [Player] {
+        var available = pool
+        var xi: [Player] = []
+        if let gk = available.filter({ $0.position == .goalkeeper }).max(by: { $0.stats.overall < $1.stats.overall }) {
+            xi.append(gk)
+            available.removeAll { $0.id == gk.id }
+        }
+        let outfield = available.sorted { $0.stats.overall > $1.stats.overall }.prefix(max(0, 11 - xi.count))
+        xi.append(contentsOf: outfield)
+        return xi
+    }
+
+    /// Weighted attacking strength – emphasises forwards & offensive stats
+    private func weightedAttack(_ xi: [Player]) -> Double {
+        guard !xi.isEmpty else { return 30.0 }
+        var total = 0.0, wSum = 0.0
+        for p in xi {
+            let w: Double
+            switch p.position {
+            case .striker:                      w = 3.0
+            case .leftWing, .rightWing:          w = 2.5
+            case .attackingMidfield:              w = 2.0
+            case .centralMidfield:               w = 1.2
+            case .defensiveMidfield:             w = 0.6
+            case .leftBack, .rightBack:          w = 0.4
+            case .centerBack:                    w = 0.2
+            case .goalkeeper:                    w = 0.05
+            }
+            total += Double(p.stats.offensive) * w
+            wSum += w
+        }
+        return total / max(wSum, 1.0)
+    }
+
+    /// Weighted defensive strength – emphasises defenders & GK
+    private func weightedDefense(_ xi: [Player]) -> Double {
+        guard !xi.isEmpty else { return 30.0 }
+        var total = 0.0, wSum = 0.0
+        for p in xi {
+            let w: Double
+            switch p.position {
+            case .goalkeeper:                    w = 3.0
+            case .centerBack:                    w = 2.5
+            case .leftBack, .rightBack:          w = 2.0
+            case .defensiveMidfield:             w = 1.8
+            case .centralMidfield:               w = 1.0
+            case .attackingMidfield:              w = 0.4
+            case .leftWing, .rightWing:          w = 0.3
+            case .striker:                       w = 0.1
+            }
+            total += Double(p.stats.defensive) * w
+            wSum += w
+        }
+        return total / max(wSum, 1.0)
+    }
+
+    /// Weighted midfield control – for possession calculation
+    private func weightedMidfield(_ xi: [Player]) -> Double {
+        guard !xi.isEmpty else { return 30.0 }
+        var total = 0.0, wSum = 0.0
+        for p in xi {
+            let w: Double
+            switch p.position {
+            case .centralMidfield, .attackingMidfield, .defensiveMidfield: w = 3.0
+            case .leftWing, .rightWing:          w = 1.5
+            case .leftBack, .rightBack:          w = 0.8
+            case .centerBack:                    w = 0.5
+            case .striker:                       w = 0.4
+            case .goalkeeper:                    w = 0.1
+            }
+            total += Double(p.stats.overall) * w
+            wSum += w
+        }
+        return total / max(wSum, 1.0)
+    }
+
+    /// Expected goals from strength, opponent defense, possession, tactics
+    private func computeXG(attack: Double, oppDefense: Double, possession: Double, xgBonus: Double, isHome: Bool) -> Double {
+        let attackEffect  = (attack - 60.0) / 50.0
+        let defenseEffect = (oppDefense - 60.0) / 50.0
+        let possEffect    = (possession - 50.0) / 100.0
+        let homeBonus: Double = isHome ? 0.2 : 0.0
+        return max(0.15, min(4.0, 1.3 + attackEffect - defenseEffect + possEffect + homeBonus + xgBonus + Double.random(in: -0.2...0.2)))
+    }
+
+    /// Weighted random scorer: favours forwards with high offensive stats
+    private func weightedScorer(from xi: [Player]) -> Player {
+        let weights: [(Player, Double)] = xi.map { p in
+            let posW: Double
+            switch p.position {
+            case .striker:                       posW = 5.0
+            case .leftWing, .rightWing:          posW = 3.0
+            case .attackingMidfield:              posW = 2.5
+            case .centralMidfield:               posW = 1.0
+            case .defensiveMidfield:             posW = 0.5
+            case .centerBack, .leftBack, .rightBack: posW = 0.2
+            case .goalkeeper:                    posW = 0.01
+            }
+            return (p, posW * Double(max(1, p.stats.offensive)) / 50.0)
+        }
+        return weightedPick(weights) ?? xi.first!
+    }
+
+    /// Weighted random assist provider: favours creative midfielders & wingers
+    private func weightedAssist(from xi: [Player], excludingId: UUID) -> Player? {
+        if Double.random(in: 0...1) < 0.12 { return nil }
+        let eligible = xi.filter { $0.id != excludingId }
+        guard !eligible.isEmpty else { return nil }
+        let weights: [(Player, Double)] = eligible.map { p in
+            let posW: Double
+            switch p.position {
+            case .attackingMidfield:              posW = 4.0
+            case .centralMidfield:               posW = 3.0
+            case .leftWing, .rightWing:          posW = 3.0
+            case .defensiveMidfield:             posW = 2.0
+            case .striker:                       posW = 1.5
+            case .leftBack, .rightBack:          posW = 1.5
+            case .centerBack:                    posW = 0.5
+            case .goalkeeper:                    posW = 0.05
+            }
+            return (p, posW * Double(max(1, p.stats.overall)) / 50.0)
+        }
+        return weightedPick(weights)
+    }
+
+    private func weightedPick(_ items: [(Player, Double)]) -> Player? {
+        let total = items.reduce(0.0) { $0 + $1.1 }
+        guard total > 0 else { return nil }
+        var r = Double.random(in: 0..<total)
+        for (player, w) in items {
+            r -= w
+            if r <= 0 { return player }
+        }
+        return items.last?.0
+    }
+
     func poissonRandom(lambda: Double) -> Int {
         let l = exp(-lambda)
         var k = 0
@@ -747,14 +998,20 @@ class GameViewModel {
     }
 
     /// On-demand squad generation. Only generates once per club.
+    /// After generation, club.rating is recalculated as the average of the top 15 players.
     func ensureSquadGenerated(for clubId: UUID) {
         guard !clubsWithSquads.contains(clubId) else { return }
         clubsWithSquads.insert(clubId)
 
         guard let club = clubs.first(where: { $0.id == clubId }) else { return }
-        let quality = club.rating - 10
-        let squad = GameDataGenerator.generateSquad(clubId: club.id, quality: quality)
+        let squad = GameDataGenerator.generateSquad(clubId: club.id, clubRating: club.rating)
         players.append(contentsOf: squad)
+
+        // Recalculate club rating = average overall of top 15 players
+        let topRatings = squad.map { $0.stats.overall }.sorted(by: >).prefix(15)
+        if !topRatings.isEmpty {
+            club.rating = topRatings.reduce(0, +) / topRatings.count
+        }
     }
 
     /// Check if a match belongs to an active league (needing full sim).
