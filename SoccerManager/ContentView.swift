@@ -34,6 +34,8 @@ struct ContentView: View {
                 ManagerStatsView(viewModel: viewModel)
             case .mail:
                 MailView(viewModel: viewModel)
+            case .finance:
+                FinanceView(viewModel: viewModel)
             }
         }
         .preferredColorScheme(.dark)

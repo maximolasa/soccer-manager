@@ -16,6 +16,7 @@ nonisolated enum GameScreen: Sendable {
     case rivalSquad
     case managerStats
     case mail
+    case finance
 }
 
 nonisolated enum TransferWindowStatus: Sendable {
@@ -626,6 +627,7 @@ class GameViewModel {
         if dayCounter % 7 == 0 {
             currentWeek += 1
             handleInjuries()
+            paySalaries()
         }
 
         // Training every ~28 days
@@ -766,6 +768,8 @@ class GameViewModel {
     func buyPlayer(_ player: Player, fee: Int) -> Bool {
         guard let club = selectedClub else { return false }
         guard club.budget >= fee else { return false }
+        // Check salary budget can cover the player's wage
+        guard club.wageBudget >= player.wage else { return false }
         club.budget -= fee
         if let oldClubId = player.clubId, let oldClub = clubs.first(where: { $0.id == oldClubId }) {
             oldClub.budget += fee
@@ -774,7 +778,7 @@ class GameViewModel {
         player.contractYearsLeft = Int.random(in: 2...5)
         sendMail(
             subject: "Transfer complete: \(player.fullName)",
-            body: "You have signed \(player.fullName) (\(player.position.rawValue), \(player.stats.overall) OVR) for \(formatCurrency(fee)). Contract: \(player.contractYearsLeft) years.",
+            body: "You have signed \(player.fullName) (\(player.position.rawValue), \(player.stats.overall) OVR) for \(formatCurrency(fee)). Wage: \(formatCurrency(player.wage))/week. Contract: \(player.contractYearsLeft) years.",
             category: .transfer
         )
         return true
@@ -811,6 +815,8 @@ class GameViewModel {
 
     func signFreeAgent(_ player: Player, wage: Int) -> Bool {
         guard let club = selectedClub else { return false }
+        // Check salary budget can cover the wage
+        guard club.wageBudget >= wage else { return false }
         player.clubId = selectedClubId
         player.contractYearsLeft = Int.random(in: 1...3)
         player.wage = wage
@@ -830,6 +836,70 @@ class GameViewModel {
             return String(format: "%.0fK", Double(amount) / 1_000)
         }
         return "\(amount)"
+    }
+
+    // MARK: - Finance
+
+    /// Total weekly wages of the player's squad
+    var totalWeeklyWages: Int {
+        guard let clubId = selectedClubId else { return 0 }
+        return players.filter { $0.clubId == clubId }.reduce(0) { $0 + $1.wage }
+    }
+
+    /// Remaining salary budget after all current wages
+    var remainingSalaryBudget: Int {
+        guard let club = selectedClub else { return 0 }
+        return club.wageBudget - totalWeeklyWages
+    }
+
+    /// Check if we can afford a player's wage
+    func canAffordWage(_ wage: Int) -> Bool {
+        return remainingSalaryBudget >= wage
+    }
+
+    /// Pay weekly salaries — deducts totalWeeklyWages from wageBudget each week
+    /// If wageBudget goes negative, the club is in financial trouble
+    func paySalaries() {
+        guard let club = selectedClub else { return }
+        let wages = totalWeeklyWages
+        club.wageBudget -= wages
+        if club.wageBudget < 0 {
+            sendMail(
+                subject: "Financial Warning",
+                body: "Your salary budget is in the red! Current balance: \(formatCurrency(club.wageBudget)). Weekly wages: \(formatCurrency(wages))/week. Consider selling players or transferring funds.",
+                category: .board
+            )
+        }
+    }
+
+    /// Move money from transfer budget to salary budget
+    /// Conversion: 1:1 (transfer money becomes salary money)
+    func transferToSalary(amount: Int) -> Bool {
+        guard let club = selectedClub else { return false }
+        guard amount > 0, club.budget >= amount else { return false }
+        club.budget -= amount
+        club.wageBudget += amount
+        sendMail(
+            subject: "Budget allocation changed",
+            body: "Moved \(formatCurrency(amount)) from transfer budget to salary budget.\n\nTransfer budget: \(formatCurrency(club.budget))\nSalary budget: \(formatCurrency(club.wageBudget))",
+            category: .board
+        )
+        return true
+    }
+
+    /// Move money from salary budget to transfer budget
+    /// Conversion: 1:1 (salary money becomes transfer money)
+    func salaryToTransfer(amount: Int) -> Bool {
+        guard let club = selectedClub else { return false }
+        guard amount > 0, club.wageBudget >= amount else { return false }
+        club.wageBudget -= amount
+        club.budget += amount
+        sendMail(
+            subject: "Budget allocation changed",
+            body: "Moved \(formatCurrency(amount)) from salary budget to transfer budget.\n\nTransfer budget: \(formatCurrency(club.budget))\nSalary budget: \(formatCurrency(club.wageBudget))",
+            category: .board
+        )
+        return true
     }
 
     // MARK: - Simulation Helpers

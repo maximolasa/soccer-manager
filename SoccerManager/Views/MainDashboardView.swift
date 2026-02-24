@@ -260,7 +260,8 @@ struct MainDashboardView: View {
             DashboardCard(title: "TRANSFERS", icon: "arrow.left.arrow.right", accentColor: .orange) {
                 VStack(spacing: 4) {
                     if let club = viewModel.selectedClub {
-                        infoRow("Funds", viewModel.formatCurrency(club.budget))
+                        infoRow("Transfer", viewModel.formatCurrency(club.budget))
+                        infoRow("Salary", viewModel.formatCurrency(club.wageBudget))
                         infoRow("Window", viewModel.transferWindow.label)
                     }
                 }
@@ -371,8 +372,8 @@ struct MainDashboardView: View {
                 quickActionButton("Academy", icon: "graduationcap.fill", color: .purple) {
                     viewModel.currentScreen = .youthAcademy
                 }
-                quickActionButton("Calendar", icon: "calendar", color: .blue) {
-                    viewModel.currentScreen = .calendar
+                quickActionButton("Finance", icon: "banknote.fill", color: .green) {
+                    viewModel.currentScreen = .finance
                 }
             }
         }
