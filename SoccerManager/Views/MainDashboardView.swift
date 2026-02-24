@@ -118,7 +118,7 @@ struct MainDashboardView: View {
                                 Text(match.matchType.rawValue)
                                     .font(.caption)
                                     .fontWeight(.semibold)
-                                    .foregroundStyle(.green)
+                                    .foregroundStyle(.white)
                                     .textCase(.uppercase)
                                 Spacer()
                                 Text(matchDateString(match.date))
@@ -202,7 +202,7 @@ struct MainDashboardView: View {
         Button {
             viewModel.currentScreen = .calendar
         } label: {
-            DashboardCard(title: "UPCOMING", icon: "calendar", accentColor: .blue) {
+            DashboardCard(title: "UPCOMING", icon: "calendar", accentColor: .blue, expandVertically: true) {
                 VStack(spacing: 4) {
                     ForEach(Array(viewModel.upcomingFixtures.prefix(5))) { match in
                         HStack(spacing: 6) {
@@ -213,7 +213,8 @@ struct MainDashboardView: View {
                             Text(match.matchType.rawValue)
                                 .font(.system(size: 9, weight: .semibold))
                                 .foregroundStyle(.blue)
-                                .frame(width: 35, alignment: .leading)
+                                .lineLimit(1)
+                                .fixedSize(horizontal: true, vertical: false)
                             Text(upcomingRivalLabel(match))
                                 .font(.system(size: 9))
                                 .foregroundStyle(.white.opacity(0.7))
