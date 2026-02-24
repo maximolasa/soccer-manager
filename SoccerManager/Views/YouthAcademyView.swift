@@ -9,15 +9,16 @@ struct YouthAcademyView: View {
 
     var body: some View {
         VStack(spacing: 0) {
+            Spacer().frame(height: 10)
             headerBar
-                .layoutPriority(1)
 
-            HStack(spacing: 12) {
-                academyUpgrades
-                youthPlayersPanel
+            ScrollView {
+                HStack(alignment: .top, spacing: 12) {
+                    academyUpgrades
+                    youthPlayersPanel
+                }
+                .padding(12)
             }
-            .padding(12)
-            .frame(maxHeight: .infinity)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color(red: 0.06, green: 0.08, blue: 0.1).ignoresSafeArea())
@@ -89,8 +90,6 @@ struct YouthAcademyView: View {
                     _ = club.upgradeAcademy(.training)
                 }
             }
-
-            Spacer()
         }
         .frame(width: 200)
     }
