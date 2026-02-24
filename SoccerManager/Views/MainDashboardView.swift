@@ -107,16 +107,16 @@ struct MainDashboardView: View {
     }
 
     private var nextMatchCard: some View {
-        DashboardCard(title: "NEXT MATCH", icon: "sportscourt.fill", accentColor: .green) {
+        DashboardCard(title: "NEXT MATCH", icon: "sportscourt.fill", accentColor: .green, expandVertically: true) {
             if let match = viewModel.nextMatch {
-                VStack(spacing: 8) {
+                VStack(spacing: 10) {
                     Button {
                         viewModel.currentScreen = .rivalSquad
                     } label: {
-                        VStack(spacing: 8) {
+                        VStack(spacing: 10) {
                             HStack {
                                 Text(match.matchType.rawValue)
-                                    .font(.caption2)
+                                    .font(.caption)
                                     .fontWeight(.semibold)
                                     .foregroundStyle(.green)
                                     .textCase(.uppercase)
@@ -126,25 +126,25 @@ struct MainDashboardView: View {
                                     .foregroundStyle(.white.opacity(0.4))
                             }
 
-                            HStack(spacing: 12) {
-                                VStack(spacing: 4) {
+                            HStack(spacing: 16) {
+                                VStack(spacing: 6) {
                                     clubBadge(match.homeClubName)
                                     Text(match.homeClubName)
-                                        .font(.caption2)
+                                        .font(.caption)
                                         .fontWeight(.medium)
                                         .lineLimit(1)
                                 }
                                 .frame(maxWidth: .infinity)
 
                                 Text("vs")
-                                    .font(.caption)
+                                    .font(.subheadline)
                                     .fontWeight(.bold)
                                     .foregroundStyle(.white.opacity(0.4))
 
-                                VStack(spacing: 4) {
+                                VStack(spacing: 6) {
                                     clubBadge(match.awayClubName)
                                     Text(match.awayClubName)
-                                        .font(.caption2)
+                                        .font(.caption)
                                         .fontWeight(.medium)
                                         .lineLimit(1)
                                 }
@@ -158,20 +158,24 @@ struct MainDashboardView: View {
                         Button {
                             viewModel.playMatch(match)
                         } label: {
-                            Text("Play Match")
-                                .font(.caption)
-                                .fontWeight(.bold)
-                                .foregroundStyle(.black)
-                                .padding(.horizontal, 24)
-                                .padding(.vertical, 6)
-                                .background(Color.green)
-                                .clipShape(.capsule)
+                            HStack(spacing: 6) {
+                                Image(systemName: "sportscourt.fill")
+                                    .font(.system(size: 10))
+                                Text("Play Match")
+                                    .font(.caption)
+                                    .fontWeight(.bold)
+                            }
+                            .foregroundStyle(.black)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 8)
+                            .background(Color.green)
+                            .clipShape(.rect(cornerRadius: 8))
                         }
                     } else {
                         Button {
                             viewModel.advanceToMatchDay()
                         } label: {
-                            HStack(spacing: 4) {
+                            HStack(spacing: 6) {
                                 Image(systemName: "forward.fill")
                                     .font(.system(size: 9))
                                 Text("Skip to Match Day")
@@ -179,10 +183,10 @@ struct MainDashboardView: View {
                                     .fontWeight(.bold)
                             }
                             .foregroundStyle(.black)
-                            .padding(.horizontal, 20)
-                            .padding(.vertical, 7)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 8)
                             .background(Color.green.opacity(0.85))
-                            .clipShape(.capsule)
+                            .clipShape(.rect(cornerRadius: 8))
                         }
                     }
                 }
@@ -200,7 +204,7 @@ struct MainDashboardView: View {
         } label: {
             DashboardCard(title: "UPCOMING", icon: "calendar", accentColor: .blue) {
                 VStack(spacing: 4) {
-                    ForEach(Array(viewModel.upcomingFixtures.prefix(6))) { match in
+                    ForEach(Array(viewModel.upcomingFixtures.prefix(5))) { match in
                         HStack {
                             Text(matchDateString(match.date))
                                 .font(.system(size: 8))
