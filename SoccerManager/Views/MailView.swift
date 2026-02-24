@@ -230,8 +230,10 @@ struct MailView: View {
                         .foregroundStyle(.white.opacity(0.25))
                     Spacer()
                 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
+        .frame(maxHeight: .infinity)
         .background(Color(white: 0.07))
     }
 

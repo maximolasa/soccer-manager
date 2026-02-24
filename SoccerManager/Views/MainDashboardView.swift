@@ -27,22 +27,21 @@ struct MainDashboardView: View {
     private var topBar: some View {
         HStack {
             if let club = viewModel.selectedClub {
-                HStack(spacing: 8) {
+                HStack(spacing: 6) {
                     ZStack {
                         Circle()
                             .fill(Color.green.opacity(0.2))
-                            .frame(width: 32, height: 32)
+                            .frame(width: 28, height: 28)
                         Text(club.shortName)
-                            .font(.system(size: 9, weight: .black))
+                            .font(.system(size: 8, weight: .black))
                             .foregroundStyle(.green)
                     }
                     VStack(alignment: .leading, spacing: 1) {
                         Text(club.name)
-                            .font(.subheadline)
-                            .fontWeight(.bold)
+                            .font(.system(size: 13, weight: .bold))
                             .foregroundStyle(.white)
                         Text(viewModel.leagueName(for: club))
-                            .font(.caption2)
+                            .font(.system(size: 9))
                             .foregroundStyle(.white.opacity(0.5))
                     }
                 }
@@ -77,8 +76,8 @@ struct MainDashboardView: View {
             }
         }
         .padding(.horizontal, 24)
-        .padding(.vertical, 10)
-        .padding(.top, 6)
+        .padding(.top, 14)
+        .padding(.bottom, 8)
         .background(Color(white: 0.1))
         .fixedSize(horizontal: false, vertical: true)
     }
