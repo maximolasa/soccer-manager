@@ -114,11 +114,17 @@ struct MainDashboardView: View {
                         viewModel.currentScreen = .rivalSquad
                     } label: {
                         VStack(spacing: 8) {
-                            Text(match.matchType.rawValue)
-                                .font(.caption2)
-                                .fontWeight(.semibold)
-                                .foregroundStyle(.green)
-                                .textCase(.uppercase)
+                            HStack {
+                                Text(match.matchType.rawValue)
+                                    .font(.caption2)
+                                    .fontWeight(.semibold)
+                                    .foregroundStyle(.green)
+                                    .textCase(.uppercase)
+                                Spacer()
+                                Text(matchDateString(match.date))
+                                    .font(.caption2)
+                                    .foregroundStyle(.white.opacity(0.4))
+                            }
 
                             HStack(spacing: 12) {
                                 VStack(spacing: 4) {
@@ -162,9 +168,22 @@ struct MainDashboardView: View {
                                 .clipShape(.capsule)
                         }
                     } else {
-                        Text(matchDateString(match.date))
-                            .font(.caption2)
-                            .foregroundStyle(.white.opacity(0.4))
+                        Button {
+                            viewModel.advanceToMatchDay()
+                        } label: {
+                            HStack(spacing: 4) {
+                                Image(systemName: "forward.fill")
+                                    .font(.system(size: 8))
+                                Text("Skip to Match Day")
+                                    .font(.caption2)
+                                    .fontWeight(.bold)
+                            }
+                            .foregroundStyle(.black)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 5)
+                            .background(Color.green.opacity(0.85))
+                            .clipShape(.capsule)
+                        }
                     }
                 }
             } else {
@@ -296,7 +315,6 @@ struct MainDashboardView: View {
 
     private var newsCard: some View {
         VStack(spacing: 0) {
-            Spacer()
             if viewModel.isMatchDay {
                 Button {
                     if let match = viewModel.todayMatch {

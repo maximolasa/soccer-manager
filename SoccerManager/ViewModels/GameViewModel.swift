@@ -509,6 +509,15 @@ class GameViewModel {
         }
     }
 
+    func advanceToMatchDay() {
+        guard let match = nextMatch else { return }
+        let cal = Calendar.current
+        while !cal.isDate(currentDate, inSameDayAs: match.date) {
+            guard canAdvance else { return }
+            advanceDay()
+        }
+    }
+
     func playMatch(_ match: Match) {
         currentMatch = match
         currentScreen = .match
