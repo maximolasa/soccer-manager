@@ -166,7 +166,18 @@ class GameViewModel {
         generateSeasonSchedule()
         initializeStandings()
         generateFreeAgents()
-        currentScreen = .dashboard\n        newsMessages = [\"You've been appointed as the new manager! Good luck!\"]\n\n        if let club = selectedClub {\n            let leagueName = leagues.first { $0.id == club.leagueId }?.name ?? \"the league\"\n            sendMail(\n                subject: \"Welcome to \\(club.name)!\",\n                body: \"Congratulations on your appointment as the new manager of \\(club.name). The board expects a strong performance in \\(leagueName) this season. Your transfer budget is \\(formatCurrency(club.budget)). Good luck!\",\n                category: .board\n            )\n        }\n    }
+        currentScreen = .dashboard
+        newsMessages = ["You've been appointed as the new manager! Good luck!"]
+
+        if let club = selectedClub {
+            let leagueName = leagues.first { $0.id == club.leagueId }?.name ?? "the league"
+            sendMail(
+                subject: "Welcome to \(club.name)!",
+                body: "Congratulations on your appointment as the new manager of \(club.name). The board expects a strong performance in \(leagueName) this season. Your transfer budget is \(formatCurrency(club.budget)). Good luck!",
+                category: .board
+            )
+        }
+    }
 
     func initializeStandings() {
         standings = [:]
