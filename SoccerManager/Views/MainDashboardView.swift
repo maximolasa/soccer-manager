@@ -11,6 +11,7 @@ struct MainDashboardView: View {
 
     var body: some View {
         VStack(spacing: 0) {
+            Spacer().frame(height: 10)
             topBar
             HStack(spacing: 12) {
                 leftColumn
