@@ -295,7 +295,7 @@ struct MainDashboardView: View {
     }
 
     private var newsCard: some View {
-        VStack {
+        VStack(spacing: 0) {
             Spacer()
             if viewModel.isMatchDay {
                 Button {
@@ -310,8 +310,7 @@ struct MainDashboardView: View {
                             .font(.system(size: 13, weight: .bold))
                     }
                     .foregroundStyle(.black)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .background(Color.orange)
                     .clipShape(.rect(cornerRadius: 12))
                 }
@@ -327,8 +326,7 @@ struct MainDashboardView: View {
                             .font(.system(size: 13, weight: .bold))
                     }
                     .foregroundStyle(.black)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .background(Color.green)
                     .clipShape(.rect(cornerRadius: 12))
                 }

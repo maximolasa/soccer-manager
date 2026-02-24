@@ -55,6 +55,7 @@ struct CalendarView: View {
         .padding(.horizontal, 16)
         .padding(.vertical, 8)
         .background(Color(white: 0.1))
+        .fixedSize(horizontal: false, vertical: true)
     }
 
     private var filterBar: some View {
