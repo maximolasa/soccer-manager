@@ -19,14 +19,13 @@ struct RivalSquadView: View {
     }
 
     var body: some View {
-        ZStack {
-            Color(red: 0.06, green: 0.08, blue: 0.1).ignoresSafeArea()
-            VStack(spacing: 0) {
-                headerBar
-                clubInfoBar
-                playerList
-            }
+        VStack(spacing: 0) {
+            headerBar
+            clubInfoBar
+            playerList
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color(red: 0.06, green: 0.08, blue: 0.1).ignoresSafeArea())
     }
 
     private var headerBar: some View {

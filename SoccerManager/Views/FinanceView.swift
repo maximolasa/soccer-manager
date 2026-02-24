@@ -23,22 +23,21 @@ struct FinanceView: View {
     }
 
     var body: some View {
-        ZStack {
-            Color(red: 0.06, green: 0.08, blue: 0.1).ignoresSafeArea()
-            VStack(spacing: 0) {
-                headerBar
+        VStack(spacing: 0) {
+            headerBar
 
-                ScrollView {
-                    VStack(spacing: 12) {
-                        overviewSection
-                        budgetAllocationSection
-                        budgetBreakdownSection
-                        wageListSection
-                    }
-                    .padding(16)
+            ScrollView {
+                VStack(spacing: 12) {
+                    overviewSection
+                    budgetAllocationSection
+                    budgetBreakdownSection
+                    wageListSection
                 }
+                .padding(16)
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color(red: 0.06, green: 0.08, blue: 0.1).ignoresSafeArea())
         .onAppear {
             initSlider()
         }

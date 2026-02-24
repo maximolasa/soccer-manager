@@ -11,23 +11,22 @@ struct MailView: View {
     }()
 
     var body: some View {
-        ZStack {
-            Color(red: 0.06, green: 0.08, blue: 0.1).ignoresSafeArea()
-            VStack(spacing: 0) {
-                headerBar
+        VStack(spacing: 0) {
+            headerBar
 
-                HStack(spacing: 0) {
-                    // Left: Mail list
-                    mailList
-                        .frame(maxWidth: .infinity)
+            HStack(spacing: 0) {
+                // Left: Mail list
+                mailList
+                    .frame(maxWidth: .infinity)
 
-                    // Right: Mail detail
-                    mailDetail
-                        .frame(maxWidth: .infinity)
-                }
-                .frame(maxHeight: .infinity)
+                // Right: Mail detail
+                mailDetail
+                    .frame(maxWidth: .infinity)
             }
+            .frame(maxHeight: .infinity)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color(red: 0.06, green: 0.08, blue: 0.1).ignoresSafeArea())
     }
 
     // MARK: - Header
