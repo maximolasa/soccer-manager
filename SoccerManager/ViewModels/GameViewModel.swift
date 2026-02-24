@@ -873,32 +873,24 @@ class GameViewModel {
     }
 
     /// Move money from transfer budget to salary budget
-    /// Conversion: 1:1 (transfer money becomes salary money)
+    /// EA FC 25 ratio: 1M transfer ≈ 19.2K/wk salary (factor of 52)
     func transferToSalary(amount: Int) -> Bool {
         guard let club = selectedClub else { return false }
         guard amount > 0, club.budget >= amount else { return false }
+        let salaryGain = amount / 52
         club.budget -= amount
-        club.wageBudget += amount
-        sendMail(
-            subject: "Budget allocation changed",
-            body: "Moved \(formatCurrency(amount)) from transfer budget to salary budget.\n\nTransfer budget: \(formatCurrency(club.budget))\nSalary budget: \(formatCurrency(club.wageBudget))",
-            category: .board
-        )
+        club.wageBudget += salaryGain
         return true
     }
 
     /// Move money from salary budget to transfer budget
-    /// Conversion: 1:1 (salary money becomes transfer money)
+    /// EA FC 25 ratio: 1K/wk salary ≈ 52K transfer
     func salaryToTransfer(amount: Int) -> Bool {
         guard let club = selectedClub else { return false }
         guard amount > 0, club.wageBudget >= amount else { return false }
+        let transferGain = amount * 52
         club.wageBudget -= amount
-        club.budget += amount
-        sendMail(
-            subject: "Budget allocation changed",
-            body: "Moved \(formatCurrency(amount)) from salary budget to transfer budget.\n\nTransfer budget: \(formatCurrency(club.budget))\nSalary budget: \(formatCurrency(club.wageBudget))",
-            category: .board
-        )
+        club.budget += transferGain
         return true
     }
 

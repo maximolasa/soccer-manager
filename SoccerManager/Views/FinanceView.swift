@@ -2,9 +2,17 @@ import SwiftUI
 
 struct FinanceView: View {
     @State var viewModel: GameViewModel
-    @State private var transferAmount: String = ""
-    @State private var showingTransferToSalary: Bool = false
-    @State private var showingSalaryToTransfer: Bool = false
+    @State private var sliderValue: Double = 0.5
+
+    /// EA FC 25 ratio: 1M transfer ≈ 19.2K/week salary (52 weeks in a season)
+    private let conversionFactor: Double = 52.0
+
+    /// Total pool in "transfer equivalent" terms
+    private var totalPool: Double {
+        guard let club = viewModel.selectedClub else { return 0 }
+        // Convert wage budget to transfer equivalent: wageBudget * conversionFactor
+        return Double(club.budget) + Double(club.wageBudget) * conversionFactor
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -13,14 +21,24 @@ struct FinanceView: View {
             ScrollView {
                 VStack(spacing: 12) {
                     overviewSection
+                    budgetAllocationSection
                     budgetBreakdownSection
                     wageListSection
-                    budgetAllocationSection
                 }
                 .padding(16)
             }
         }
         .background(Color(red: 0.06, green: 0.08, blue: 0.1), ignoresSafeAreaEdges: .all)
+        .onAppear {
+            initSlider()
+        }
+    }
+
+    private func initSlider() {
+        guard let club = viewModel.selectedClub else { return }
+        let total = Double(club.budget) + Double(club.wageBudget) * conversionFactor
+        guard total > 0 else { sliderValue = 0.5; return }
+        sliderValue = Double(club.budget) / total
     }
 
     // MARK: - Header
@@ -66,11 +84,10 @@ struct FinanceView: View {
             sectionHeader("FINANCIAL OVERVIEW", icon: "chart.bar.fill", color: .green)
 
             if let club = viewModel.selectedClub {
-                let totalBudget = club.budget + club.wageBudget
                 HStack(spacing: 0) {
-                    statCard("Total Funds", viewModel.formatCurrency(totalBudget), .white)
                     statCard("Transfer Budget", viewModel.formatCurrency(club.budget), .cyan)
                     statCard("Salary Budget", viewModel.formatCurrency(club.wageBudget), salaryColor(club))
+                    statCard("Weekly Wages", viewModel.formatCurrency(viewModel.totalWeeklyWages), .orange)
                 }
             }
         }
@@ -79,24 +96,170 @@ struct FinanceView: View {
         .clipShape(.rect(cornerRadius: 12))
     }
 
+    // MARK: - Budget Allocation Slider
+
+    private var budgetAllocationSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            sectionHeader("BUDGET ALLOCATION", icon: "slider.horizontal.3", color: .purple)
+
+            HStack {
+                Text("Drag to reallocate funds. Ratio: 1M transfer ≈ \(viewModel.formatCurrency(Int(1_000_000 / conversionFactor)))/wk salary")
+                    .font(.system(size: 9))
+                    .foregroundStyle(.white.opacity(0.4))
+                Spacer()
+            }
+
+            if let club = viewModel.selectedClub {
+                let newTransfer = Int(totalPool * sliderValue)
+                let newSalary = Int(totalPool * (1.0 - sliderValue) / conversionFactor)
+
+                // Labels above bar
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("TRANSFER")
+                            .font(.system(size: 8, weight: .bold))
+                            .foregroundStyle(.cyan)
+                            .tracking(1)
+                        Text(viewModel.formatCurrency(newTransfer))
+                            .font(.system(size: 18, weight: .black, design: .monospaced))
+                            .foregroundStyle(.cyan)
+                    }
+
+                    Spacer()
+
+                    VStack(alignment: .trailing, spacing: 2) {
+                        Text("SALARY")
+                            .font(.system(size: 8, weight: .bold))
+                            .foregroundStyle(.orange)
+                            .tracking(1)
+                        Text(viewModel.formatCurrency(newSalary))
+                            .font(.system(size: 18, weight: .black, design: .monospaced))
+                            .foregroundStyle(.orange)
+                    }
+                }
+
+                // The allocation bar
+                GeometryReader { geo in
+                    let barWidth = geo.size.width
+                    let thumbX = barWidth * sliderValue
+
+                    ZStack(alignment: .leading) {
+                        // Background bar
+                        HStack(spacing: 0) {
+                            // Transfer side (left)
+                            Rectangle()
+                                .fill(Color.cyan.opacity(0.3))
+                                .frame(width: max(0, thumbX))
+
+                            // Salary side (right)
+                            Rectangle()
+                                .fill(Color.orange.opacity(0.3))
+                        }
+                        .frame(height: 32)
+                        .clipShape(.rect(cornerRadius: 8))
+
+                        // Thumb
+                        RoundedRectangle(cornerRadius: 4)
+                            .fill(Color.white)
+                            .frame(width: 6, height: 40)
+                            .shadow(color: .black.opacity(0.5), radius: 4)
+                            .offset(x: max(0, min(barWidth - 6, thumbX - 3)))
+                            .gesture(
+                                DragGesture(minimumDistance: 0)
+                                    .onChanged { value in
+                                        let newValue = max(0.0, min(1.0, value.location.x / barWidth))
+                                        sliderValue = newValue
+                                    }
+                                    .onEnded { _ in
+                                        applyAllocation()
+                                    }
+                            )
+                    }
+                }
+                .frame(height: 40)
+
+                // Percentage labels
+                HStack {
+                    Text("\(Int(sliderValue * 100))%")
+                        .font(.system(size: 10, weight: .bold, design: .monospaced))
+                        .foregroundStyle(.cyan.opacity(0.6))
+                    Spacer()
+                    Text("\(Int((1.0 - sliderValue) * 100))%")
+                        .font(.system(size: 10, weight: .bold, design: .monospaced))
+                        .foregroundStyle(.orange.opacity(0.6))
+                }
+
+                // Apply button
+                Button {
+                    applyAllocation()
+                } label: {
+                    Text("Apply Allocation")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundStyle(.black)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 8)
+                        .background(Color.green)
+                        .clipShape(.rect(cornerRadius: 8))
+                }
+                .buttonStyle(.plain)
+
+                // Change indicator
+                let transferDiff = newTransfer - club.budget
+                let salaryDiff = newSalary - club.wageBudget
+                if transferDiff != 0 || salaryDiff != 0 {
+                    HStack {
+                        Label(
+                            "\(transferDiff >= 0 ? "+" : "")\(viewModel.formatCurrency(transferDiff))",
+                            systemImage: transferDiff >= 0 ? "arrow.up.right" : "arrow.down.right"
+                        )
+                        .font(.system(size: 9, weight: .semibold))
+                        .foregroundStyle(transferDiff >= 0 ? .green : .red)
+
+                        Spacer()
+
+                        Label(
+                            "\(salaryDiff >= 0 ? "+" : "")\(viewModel.formatCurrency(salaryDiff))",
+                            systemImage: salaryDiff >= 0 ? "arrow.up.right" : "arrow.down.right"
+                        )
+                        .font(.system(size: 9, weight: .semibold))
+                        .foregroundStyle(salaryDiff >= 0 ? .green : .red)
+                    }
+                }
+            }
+        }
+        .padding(12)
+        .background(Color.white.opacity(0.05))
+        .clipShape(.rect(cornerRadius: 12))
+    }
+
+    private func applyAllocation() {
+        guard let club = viewModel.selectedClub else { return }
+        let newTransfer = Int(totalPool * sliderValue)
+        let newSalary = Int(totalPool * (1.0 - sliderValue) / conversionFactor)
+        club.budget = newTransfer
+        club.wageBudget = newSalary
+    }
+
     // MARK: - Budget Breakdown
 
     private var budgetBreakdownSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            sectionHeader("SALARY BREAKDOWN", icon: "person.2.fill", color: .orange)
+            sectionHeader("SALARY STATUS", icon: "person.2.fill", color: .orange)
 
             if let club = viewModel.selectedClub {
                 HStack(spacing: 0) {
-                    statCard("Weekly Wages", viewModel.formatCurrency(viewModel.totalWeeklyWages), .orange)
-                    statCard("Salary Remaining", viewModel.formatCurrency(viewModel.remainingSalaryBudget), viewModel.remainingSalaryBudget > 0 ? .green : .red)
+                    statCard("Available/wk", viewModel.formatCurrency(viewModel.remainingSalaryBudget), viewModel.remainingSalaryBudget > 0 ? .green : .red)
                     statCard("Weeks Covered", weeksRemaining(club), weeksRemainingColor(club))
+                    statCard("Squad Size", "\(viewModel.myPlayers.count)", .white)
                 }
 
                 // Budget health bar
-                let usageRatio = club.wageBudget > 0 ? min(1.0, Double(viewModel.totalWeeklyWages) / Double(club.wageBudget) * 10.0) : 1.0
+                let wages = viewModel.totalWeeklyWages
+                let budget = club.wageBudget
+                let usageRatio = budget > 0 ? min(1.0, Double(wages) / Double(budget) * 10.0) : 1.0
                 VStack(alignment: .leading, spacing: 4) {
                     HStack {
-                        Text("Wage Usage")
+                        Text("Wage Consumption")
                             .font(.system(size: 9, weight: .medium))
                             .foregroundStyle(.white.opacity(0.5))
                         Spacer()
@@ -197,82 +360,7 @@ struct FinanceView: View {
         .clipShape(.rect(cornerRadius: 12))
     }
 
-    // MARK: - Budget Allocation
-
-    private var budgetAllocationSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            sectionHeader("BUDGET ALLOCATION", icon: "arrow.left.arrow.right", color: .purple)
-
-            Text("Transfer funds between your transfer and salary budgets. Conversion is 1:1.")
-                .font(.system(size: 10))
-                .foregroundStyle(.white.opacity(0.4))
-
-            if let club = viewModel.selectedClub {
-                // Quick transfer buttons
-                VStack(spacing: 8) {
-                    // Transfer → Salary
-                    HStack(spacing: 8) {
-                        Text("Transfer → Salary")
-                            .font(.system(size: 10, weight: .semibold))
-                            .foregroundStyle(.white.opacity(0.7))
-                            .frame(width: 110, alignment: .leading)
-
-                        ForEach(quickAmounts(from: club.budget), id: \.self) { amount in
-                            Button {
-                                _ = viewModel.transferToSalary(amount: amount)
-                            } label: {
-                                Text(viewModel.formatCurrency(amount))
-                                    .font(.system(size: 9, weight: .bold))
-                                    .foregroundStyle(.black)
-                                    .padding(.horizontal, 10)
-                                    .padding(.vertical, 6)
-                                    .background(Color.cyan)
-                                    .clipShape(.rect(cornerRadius: 6))
-                            }
-                            .buttonStyle(.plain)
-                        }
-
-                        Spacer()
-                    }
-
-                    // Salary → Transfer
-                    HStack(spacing: 8) {
-                        Text("Salary → Transfer")
-                            .font(.system(size: 10, weight: .semibold))
-                            .foregroundStyle(.white.opacity(0.7))
-                            .frame(width: 110, alignment: .leading)
-
-                        ForEach(quickAmounts(from: club.wageBudget), id: \.self) { amount in
-                            Button {
-                                _ = viewModel.salaryToTransfer(amount: amount)
-                            } label: {
-                                Text(viewModel.formatCurrency(amount))
-                                    .font(.system(size: 9, weight: .bold))
-                                    .foregroundStyle(.black)
-                                    .padding(.horizontal, 10)
-                                    .padding(.vertical, 6)
-                                    .background(Color.orange)
-                                    .clipShape(.rect(cornerRadius: 6))
-                            }
-                            .buttonStyle(.plain)
-                        }
-
-                        Spacer()
-                    }
-                }
-            }
-        }
-        .padding(12)
-        .background(Color.white.opacity(0.05))
-        .clipShape(.rect(cornerRadius: 12))
-    }
-
     // MARK: - Helpers
-
-    private func quickAmounts(from available: Int) -> [Int] {
-        let options = [1_000_000, 5_000_000, 10_000_000, 25_000_000]
-        return options.filter { $0 <= available }
-    }
 
     private func weeksRemaining(_ club: Club) -> String {
         let wages = viewModel.totalWeeklyWages

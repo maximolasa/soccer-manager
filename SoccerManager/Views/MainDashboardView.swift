@@ -369,7 +369,7 @@ struct MainDashboardView: View {
                 }
             }
             HStack(spacing: 8) {
-                quickActionButton("Academy", icon: "graduationcap.fill", color: .purple) {
+                quickActionButton("Academy", icon: "graduationcap.fill", color: .cyan) {
                     viewModel.currentScreen = .youthAcademy
                 }
                 quickActionButton("Finance", icon: "banknote.fill", color: .green) {
