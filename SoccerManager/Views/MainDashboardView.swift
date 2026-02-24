@@ -337,7 +337,6 @@ struct MainDashboardView: View {
                     .offset(x: -6, y: 6)
             }
         }
-        .frame(maxHeight: .infinity)
     }
 
     private var managerCard: some View {
@@ -356,20 +355,25 @@ struct MainDashboardView: View {
     }
 
     private var quickActionsGrid: some View {
-        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
-            quickActionButton("Manager", icon: "person.fill", color: .purple) {
-                viewModel.currentScreen = .managerStats
+        VStack(spacing: 8) {
+            HStack(spacing: 8) {
+                quickActionButton("Manager", icon: "person.fill", color: .purple) {
+                    viewModel.currentScreen = .managerStats
+                }
+                quickActionButton("Tactics", icon: "arrow.triangle.branch", color: .orange) {
+                    viewModel.currentScreen = .tactics
+                }
             }
-            quickActionButton("Tactics", icon: "arrow.triangle.branch", color: .orange) {
-                viewModel.currentScreen = .tactics
-            }
-            quickActionButton("Academy", icon: "graduationcap.fill", color: .purple) {
-                viewModel.currentScreen = .youthAcademy
-            }
-            quickActionButton("Calendar", icon: "calendar", color: .blue) {
-                viewModel.currentScreen = .calendar
+            HStack(spacing: 8) {
+                quickActionButton("Academy", icon: "graduationcap.fill", color: .purple) {
+                    viewModel.currentScreen = .youthAcademy
+                }
+                quickActionButton("Calendar", icon: "calendar", color: .blue) {
+                    viewModel.currentScreen = .calendar
+                }
             }
         }
+        .frame(maxHeight: .infinity)
     }
 
     private var newsCard: some View {

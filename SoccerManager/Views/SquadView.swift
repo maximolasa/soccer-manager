@@ -115,8 +115,9 @@ struct SquadView: View {
                 .foregroundStyle(.white.opacity(0.5))
         }
         .padding(.horizontal, 16)
-        .padding(.vertical, 8)
+        .padding(.vertical, 14)
         .background(Color(white: 0.1))
+        .fixedSize(horizontal: false, vertical: true)
     }
 
     private var filtersBar: some View {

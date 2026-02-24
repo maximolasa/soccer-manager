@@ -179,8 +179,9 @@ struct TacticsView: View {
             .buttonStyle(.plain)
         }
         .padding(.horizontal, 24)
-        .padding(.vertical, 8)
+        .padding(.vertical, 14)
         .background(Color(white: 0.1))
+        .fixedSize(horizontal: false, vertical: true)
     }
 
     private func opponentName(for match: Match) -> String {

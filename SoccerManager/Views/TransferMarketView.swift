@@ -135,8 +135,9 @@ struct TransferMarketView: View {
             }
         }
         .padding(.horizontal, 16)
-        .padding(.vertical, 8)
+        .padding(.vertical, 14)
         .background(Color(white: 0.1))
+        .fixedSize(horizontal: false, vertical: true)
     }
 
     private var windowBadge: some View {

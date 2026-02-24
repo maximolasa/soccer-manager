@@ -83,7 +83,7 @@ struct StandingsView: View {
             Color.clear.frame(width: 50)
         }
         .padding(.horizontal, 16)
-        .padding(.vertical, 8)
+        .padding(.vertical, 14)
         .background(Color(white: 0.1))
         .fixedSize(horizontal: false, vertical: true)
     }
