@@ -15,6 +15,7 @@ struct SquadView: View {
         case physical = "PHY"
         case age = "Age"
         case goals = "Goals"
+        case value = "Value"
         case wage = "Wage"
     }
 
@@ -65,6 +66,8 @@ struct SquadView: View {
             list.sort { asc ? $0.age > $1.age : $0.age < $1.age }
         case .goals:
             list.sort { asc ? $0.goals < $1.goals : $0.goals > $1.goals }
+        case .value:
+            list.sort { asc ? $0.marketValue < $1.marketValue : $0.marketValue > $1.marketValue }
         case .wage:
             list.sort { asc ? $0.wage < $1.wage : $0.wage > $1.wage }
         }
@@ -122,7 +125,7 @@ struct SquadView: View {
 
     private var filtersBar: some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 6) {
+            HStack(spacing: 8) {
                 filterChip("All", isSelected: selectedPosition == nil) {
                     selectedPosition = nil
                 }
@@ -132,8 +135,8 @@ struct SquadView: View {
                     }
                 }
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 6)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 8)
         }
         .background(Color(white: 0.07))
     }
@@ -142,20 +145,21 @@ struct SquadView: View {
         ScrollView {
             HStack(spacing: 0) {
                 Text("Player").frame(maxWidth: .infinity, alignment: .leading)
-                sortableHeader("Pos", option: .position, width: 36)
-                sortableHeader("Age", option: .age, width: 32)
-                sortableHeader("OVR", option: .overall, width: 36)
-                sortableHeader("OFF", option: .offensive, width: 36)
-                sortableHeader("DEF", option: .defensive, width: 36)
-                sortableHeader("PHY", option: .physical, width: 36)
-                sortableHeader("Goals", option: .goals, width: 40)
-                sortableHeader("Wage", option: .wage, width: 52)
-                Text("Status").frame(width: 50)
+                sortableHeader("Pos", option: .position, width: 40)
+                sortableHeader("Age", option: .age, width: 36)
+                sortableHeader("OVR", option: .overall, width: 40)
+                sortableHeader("OFF", option: .offensive, width: 40)
+                sortableHeader("DEF", option: .defensive, width: 40)
+                sortableHeader("PHY", option: .physical, width: 40)
+                sortableHeader("Goals", option: .goals, width: 44)
+                sortableHeader("Value", option: .value, width: 62)
+                sortableHeader("Wage", option: .wage, width: 62)
+                Text("Status").frame(width: 44)
             }
-            .font(.system(size: 9, weight: .bold))
+            .font(.system(size: 10, weight: .bold))
             .foregroundStyle(.white.opacity(0.4))
-            .padding(.horizontal, 12)
-            .padding(.vertical, 6)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 8)
             .background(Color.white.opacity(0.03))
 
             LazyVStack(spacing: 0) {
@@ -175,55 +179,60 @@ struct SquadView: View {
         HStack(spacing: 0) {
             HStack(spacing: 6) {
                 Text(player.fullName)
-                    .font(.system(size: 10, weight: .medium))
+                    .font(.system(size: 12, weight: .medium))
                     .foregroundStyle(.white)
                     .lineLimit(1)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
 
             Text(player.position.rawValue)
-                .font(.system(size: 9, weight: .semibold))
+                .font(.system(size: 10, weight: .semibold))
                 .foregroundStyle(positionColor(player.position))
-                .frame(width: 36)
+                .frame(width: 40)
 
             Text("\(player.age)")
-                .font(.system(size: 9))
+                .font(.system(size: 10))
                 .foregroundStyle(.white.opacity(0.7))
-                .frame(width: 32)
+                .frame(width: 36)
 
             statBadge(player.stats.overall)
-                .frame(width: 36)
+                .frame(width: 40)
 
             Text("\(player.stats.offensive)")
-                .font(.system(size: 9, design: .monospaced))
-                .foregroundStyle(.white.opacity(0.7))
-                .frame(width: 36)
-
-            Text("\(player.stats.defensive)")
-                .font(.system(size: 9, design: .monospaced))
-                .foregroundStyle(.white.opacity(0.7))
-                .frame(width: 36)
-
-            Text("\(player.stats.physical)")
-                .font(.system(size: 9, design: .monospaced))
-                .foregroundStyle(.white.opacity(0.7))
-                .frame(width: 36)
-
-            Text("\(player.goals)")
-                .font(.system(size: 9, design: .monospaced))
+                .font(.system(size: 10, design: .monospaced))
                 .foregroundStyle(.white.opacity(0.7))
                 .frame(width: 40)
 
-            Text(viewModel.formatCurrency(player.wage))
-                .font(.system(size: 9))
+            Text("\(player.stats.defensive)")
+                .font(.system(size: 10, design: .monospaced))
+                .foregroundStyle(.white.opacity(0.7))
+                .frame(width: 40)
+
+            Text("\(player.stats.physical)")
+                .font(.system(size: 10, design: .monospaced))
+                .foregroundStyle(.white.opacity(0.7))
+                .frame(width: 40)
+
+            Text("\(player.goals)")
+                .font(.system(size: 10, design: .monospaced))
+                .foregroundStyle(.white.opacity(0.7))
+                .frame(width: 44)
+
+            Text(viewModel.formatCurrency(player.marketValue))
+                .font(.system(size: 10))
                 .foregroundStyle(.white.opacity(0.5))
-                .frame(width: 52)
+                .frame(width: 62)
+
+            Text(viewModel.formatCurrency(player.wage))
+                .font(.system(size: 10))
+                .foregroundStyle(.orange.opacity(0.7))
+                .frame(width: 62)
 
             statusIcon(player)
-                .frame(width: 50)
+                .frame(width: 44)
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 6)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 7)
         .background(Color.white.opacity(0.02))
     }
 
@@ -299,10 +308,10 @@ struct SquadView: View {
     private func filterChip(_ text: String, isSelected: Bool, color: Color = .green, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Text(text)
-                .font(.system(size: 9, weight: .semibold))
+                .font(.system(size: 11, weight: .semibold))
                 .foregroundStyle(isSelected ? .black : .white.opacity(0.6))
-                .padding(.horizontal, 8)
-                .padding(.vertical, 4)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
                 .background(isSelected ? color : Color.white.opacity(0.08))
                 .clipShape(.capsule)
         }
@@ -311,9 +320,9 @@ struct SquadView: View {
 
     private func statBadge(_ value: Int, large: Bool = false) -> some View {
         Text("\(value)")
-            .font(.system(size: large ? 20 : 10, weight: .bold, design: .monospaced))
+            .font(.system(size: large ? 20 : 11, weight: .bold, design: .monospaced))
             .foregroundStyle(statColor(value))
-            .padding(.horizontal, large ? 10 : 4)
+            .padding(.horizontal, large ? 10 : 5)
             .padding(.vertical, large ? 4 : 2)
             .background(statColor(value).opacity(0.15))
             .clipShape(.rect(cornerRadius: large ? 8 : 4))
@@ -351,15 +360,15 @@ struct SquadView: View {
         Group {
             if player.isInjured {
                 Image(systemName: "cross.fill")
-                    .font(.system(size: 9))
+                    .font(.system(size: 11))
                     .foregroundStyle(.red)
             } else if player.yellowCards >= 4 {
                 Image(systemName: "exclamationmark.triangle.fill")
-                    .font(.system(size: 9))
+                    .font(.system(size: 11))
                     .foregroundStyle(.yellow)
             } else {
                 Image(systemName: "checkmark.circle.fill")
-                    .font(.system(size: 9))
+                    .font(.system(size: 11))
                     .foregroundStyle(.green.opacity(0.5))
             }
         }

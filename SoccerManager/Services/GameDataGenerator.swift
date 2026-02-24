@@ -34,35 +34,56 @@ struct GameDataGenerator {
 
     // MARK: - FIFA-Style Financial Helpers
 
-    /// FIFA-style exponential wage curve.
-    /// Prime-age (24-29): 99 OVR ≈ €260K/wk, 85 OVR ≈ €45K/wk, 70 OVR ≈ €6K/wk, 50 OVR ≈ €500/wk
-    static func fifaWage(overall: Int, age: Int) -> Int {
-        let baseWage = 100.0 * exp(0.122 * Double(overall - 35))
-
-        let ageFactor: Double
-        switch age {
-        case ...19:   ageFactor = 0.40
-        case 20...21: ageFactor = 0.60
-        case 22...23: ageFactor = 0.80
-        case 24...29: ageFactor = 1.00
-        case 30...31: ageFactor = 0.92
-        case 32...33: ageFactor = 0.82
-        case 34...35: ageFactor = 0.70
-        default:      ageFactor = 0.50
+    /// Base wage before age/variance. Polynomial-exponential matching FIFA Career Mode:
+    /// 92 OVR ≈ €200K, 85 OVR ≈ €67K, 80 OVR ≈ €35K, 70 OVR ≈ €11K, 60 OVR ≈ €3.4K
+    private static func baseWageForOVR(_ overall: Int) -> Double {
+        let ovr = Double(overall)
+        var wage = 0.001 * pow(ovr, 2.5) * exp(0.08 * ovr)
+        // Superstar premium: 88+ earn disproportionately more
+        if overall >= 88 {
+            wage *= 1.0 + Double(overall - 87) * 0.10
+        } else if overall >= 83 {
+            wage *= 1.0 + Double(overall - 82) * 0.04
         }
-
-        return max(500, Int(baseWage * ageFactor))
+        return wage
     }
 
-    /// Estimate total wage budget for a club: covers ~52 weeks (1 season) of wages.
-    /// Uses midpoint offsets from eaSquadRatings distribution.
+    /// FIFA-style weekly wage: polynomial-exponential curve + superstar premium + age + variance.
+    /// Prime (24-29): 92 OVR ≈ €200K/wk, 85 ≈ €67K, 80 ≈ €35K, 70 ≈ €11K, 60 ≈ €3.4K, 50 ≈ €1K
+    static func fifaWage(overall: Int, age: Int) -> Int {
+        var wage = baseWageForOVR(overall)
+
+        // Age factor: youth contracts < prime < veteran decline
+        let ageFactor: Double
+        switch age {
+        case ...18:   ageFactor = 0.25
+        case 19:      ageFactor = 0.35
+        case 20...21: ageFactor = 0.50
+        case 22...23: ageFactor = 0.75
+        case 24...29: ageFactor = 1.00
+        case 30...31: ageFactor = 0.90
+        case 32...33: ageFactor = 0.80
+        case 34...35: ageFactor = 0.65
+        default:      ageFactor = 0.50
+        }
+        wage *= ageFactor
+
+        // ±12% variance so same-OVR players don't earn identical wages
+        wage *= Double.random(in: 0.88...1.12)
+
+        return max(500, Int(wage))
+    }
+
+    /// Estimate total wage budget for a club: covers 52 weeks (1 season) of wages.
+    /// Uses midpoint offsets from eaSquadRatings distribution, average age factor 0.78.
     static func estimateWageBudget(clubRating: Int) -> Int {
         let midOffsets = [7, 5, 4, 3, 2, 1, -1, -2, -2, -3, -4, -4,
                           -5, -6, -7, -12, -14, -16, -18, -20, -22, -24, -26, -29]
         var weeklyTotal = 0
         for offset in midOffsets {
             let ovr = max(25, min(99, clubRating + offset))
-            weeklyTotal += max(500, Int(100.0 * exp(0.122 * Double(ovr - 35))))
+            let w = baseWageForOVR(ovr) * 0.78  // average age factor
+            weeklyTotal += max(500, Int(w))
         }
         return weeklyTotal * 52
     }

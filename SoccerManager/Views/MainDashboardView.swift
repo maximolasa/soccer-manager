@@ -78,6 +78,7 @@ struct MainDashboardView: View {
         .padding(.horizontal, 24)
         .padding(.vertical, 8)
         .background(Color(white: 0.1))
+        .fixedSize(horizontal: false, vertical: true)
     }
 
     private var leftColumn: some View {
