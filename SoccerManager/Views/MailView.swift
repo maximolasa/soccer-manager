@@ -111,6 +111,7 @@ struct MailView: View {
         .background(Color(white: 0.05))
     }
 
+    @ViewBuilder
     private func mailRow(_ mail: MailMessage) -> some View {
         Button {
             selectedMail = mail
