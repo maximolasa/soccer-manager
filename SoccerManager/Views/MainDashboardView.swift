@@ -100,8 +100,11 @@ struct MainDashboardView: View {
     private var rightColumn: some View {
         VStack(spacing: 10) {
             mailCard
+                .frame(maxHeight: .infinity)
             quickActionsGrid
+                .frame(maxHeight: .infinity)
             newsCard
+                .frame(maxHeight: .infinity)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
@@ -415,7 +418,6 @@ struct MainDashboardView: View {
             }
         }
         .frame(maxWidth: .infinity)
-        .frame(height: 50)
     }
 
     private var bottomBar: some View {
