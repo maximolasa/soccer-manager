@@ -331,7 +331,7 @@ class GameViewModel {
         seasonFixtures.sort { $0.date < $1.date }
     }
 
-    func simulateMatch(_ match: Match) {
+    func simulateMatch(_ match: Match, updateStandingsNow: Bool = true) {
         let homeClub = clubs.first { $0.id == match.homeClubId }
         let awayClub = clubs.first { $0.id == match.awayClubId }
         let homeRating = Double(homeClub?.rating ?? 50)
@@ -427,6 +427,12 @@ class GameViewModel {
         }
         match.playerRatings = ratings
 
+        if updateStandingsNow, match.matchType == .league, let leagueId = match.leagueId {
+            updateStandings(leagueId: leagueId, match: match)
+        }
+    }
+
+    func finalizeMatchStandings(_ match: Match) {
         if match.matchType == .league, let leagueId = match.leagueId {
             updateStandings(leagueId: leagueId, match: match)
         }

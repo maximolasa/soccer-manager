@@ -11,6 +11,10 @@ struct MatchView: View {
     @State private var simulationTask: Task<Void, Never>?
     @State private var displayedHomeScore: Int = 0
     @State private var displayedAwayScore: Int = 0
+    @State private var pendingFinalHomeScore: Int = 0
+    @State private var pendingFinalAwayScore: Int = 0
+    @State private var pendingEvents: [MatchEvent] = []
+    @State private var simulationFinished: Bool = false
 
     nonisolated enum MatchTab: String, CaseIterable, Sendable {
         case overview = "Overview"
@@ -115,7 +119,7 @@ struct MatchView: View {
                     .font(.system(size: 20, weight: .bold, design: .monospaced))
                     .foregroundStyle(isPlaying ? .green : .white.opacity(0.5))
 
-                Text(match.isPlayed ? "Full Time" : (isPlaying ? "Live" : "Not Started"))
+                Text(simulationFinished ? "Full Time" : (isPlaying ? "Live" : "Not Started"))
                     .font(.system(size: 9))
                     .foregroundStyle(isPlaying ? .green : .white.opacity(0.4))
             }
@@ -169,7 +173,7 @@ struct MatchView: View {
                 eventRow(event, match: match)
             }
 
-            if match.isPlayed && displayedEvents.isEmpty {
+            if simulationFinished && displayedEvents.isEmpty {
                 ForEach(match.events) { event in
                     eventRow(event, match: match)
                 }
@@ -180,7 +184,7 @@ struct MatchView: View {
                     Image(systemName: "sportscourt.fill")
                         .font(.system(size: 40))
                         .foregroundStyle(.white.opacity(0.1))
-                    Text("Press Simulate Match to start")
+                    Text("Press Kick Off to start the match")
                         .font(.caption)
                         .foregroundStyle(.white.opacity(0.3))
                 }
@@ -304,14 +308,14 @@ struct MatchView: View {
 
     private func matchBottomBar(_ match: Match) -> some View {
         HStack {
-            if !match.isPlayed && !hasStarted {
-                // Not started yet — show Simulate Match
+            if !hasStarted && !simulationFinished {
+                // Not started — show Kick Off + Skip to End
                 Button {
                     startSimulation(match)
                 } label: {
                     HStack(spacing: 6) {
                         Image(systemName: "play.fill")
-                        Text("Simulate Match")
+                        Text("Kick Off")
                             .fontWeight(.bold)
                     }
                     .font(.caption)
@@ -319,6 +323,22 @@ struct MatchView: View {
                     .padding(.horizontal, 20)
                     .padding(.vertical, 8)
                     .background(Color.green)
+                    .clipShape(.capsule)
+                }
+
+                Button {
+                    instantSkipToEnd(match)
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "forward.end.fill")
+                        Text("Skip to End")
+                            .fontWeight(.bold)
+                    }
+                    .font(.caption)
+                    .foregroundStyle(.black)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 8)
+                    .background(Color.orange)
                     .clipShape(.capsule)
                 }
             } else if isPlaying {
@@ -354,7 +374,7 @@ struct MatchView: View {
                     .background(Color.orange)
                     .clipShape(.capsule)
                 }
-            } else if match.isPlayed {
+            } else if simulationFinished {
                 // Match ended — show Continue
                 Button {
                     viewModel.continueFromResult()
@@ -387,7 +407,7 @@ struct MatchView: View {
                         .font(.system(size: 9))
                         .foregroundStyle(.white.opacity(0.4))
                 }
-            } else if match.isPlayed {
+            } else if simulationFinished {
                 Text("Full Time")
                     .font(.caption)
                     .fontWeight(.bold)
@@ -407,9 +427,18 @@ struct MatchView: View {
         displayedHomeScore = 0
         displayedAwayScore = 0
 
-        // Pre-compute the match result
-        viewModel.simulateMatch(match)
-        let allEvents = match.events.sorted { $0.minute < $1.minute }
+        // Pre-compute the match result WITHOUT updating standings
+        viewModel.simulateMatch(match, updateStandingsNow: false)
+
+        // Save computed results
+        pendingFinalHomeScore = match.homeScore
+        pendingFinalAwayScore = match.awayScore
+        pendingEvents = match.events.sorted { $0.minute < $1.minute }
+
+        // Hide scores from the match object so they don't flash
+        match.homeScore = 0
+        match.awayScore = 0
+        match.isPlayed = false
 
         // Animate progressively
         simulationTask = Task {
@@ -418,7 +447,7 @@ struct MatchView: View {
                 try? await Task.sleep(for: .milliseconds(ms))
                 if Task.isCancelled { return }
                 currentMinute = minute
-                let newEvents = allEvents.filter { $0.minute == minute }
+                let newEvents = pendingEvents.filter { $0.minute == minute }
                 for event in newEvents {
                     displayedEvents.append(event)
                     if event.type == .goal {
@@ -430,21 +459,52 @@ struct MatchView: View {
                     }
                 }
             }
-            // Simulation finished
-            isPlaying = false
-            displayedHomeScore = match.homeScore
-            displayedAwayScore = match.awayScore
+            // Simulation finished — finalize
+            finalizeMatch(match)
         }
     }
 
+    /// Skip to end without having started simulation (Kick Off was never pressed)
+    private func instantSkipToEnd(_ match: Match) {
+        // Compute the match result WITHOUT updating standings
+        viewModel.simulateMatch(match, updateStandingsNow: false)
+
+        pendingFinalHomeScore = match.homeScore
+        pendingFinalAwayScore = match.awayScore
+        pendingEvents = match.events.sorted { $0.minute < $1.minute }
+
+        // Reset match scores briefly then finalize
+        match.homeScore = 0
+        match.awayScore = 0
+        match.isPlayed = false
+
+        hasStarted = true
+        finalizeMatch(match)
+    }
+
+    /// Skip to end while simulation is running
     private func skipToEnd(_ match: Match) {
         simulationTask?.cancel()
         simulationTask = nil
+        finalizeMatch(match)
+    }
+
+    /// Apply final state: scores, standings, events
+    private func finalizeMatch(_ match: Match) {
         isPlaying = false
+        simulationFinished = true
         currentMinute = 90
-        displayedEvents = match.events.sorted { $0.minute < $1.minute }
-        displayedHomeScore = match.homeScore
-        displayedAwayScore = match.awayScore
+        displayedEvents = pendingEvents
+        displayedHomeScore = pendingFinalHomeScore
+        displayedAwayScore = pendingFinalAwayScore
+
+        // Restore actual match data
+        match.homeScore = pendingFinalHomeScore
+        match.awayScore = pendingFinalAwayScore
+        match.isPlayed = true
+
+        // NOW update standings
+        viewModel.finalizeMatchStandings(match)
     }
 
     private func eventRow(_ event: MatchEvent, match: Match) -> some View {
