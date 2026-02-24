@@ -58,6 +58,8 @@ class Club: Identifiable {
         case "skyblue": return Color(red: 0.53, green: 0.81, blue: 0.92)
         case "claret", "maroon": return Color(red: 0.5, green: 0.0, blue: 0.13)
         case "cyan": return .cyan
+        case "pink": return Color(red: 0.96, green: 0.46, blue: 0.64)
+        case "gold": return Color(red: 0.85, green: 0.65, blue: 0.13)
         default: return .gray
         }
     }

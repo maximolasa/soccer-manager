@@ -118,15 +118,10 @@ struct TeamSelectionView: View {
                                             RoundedRectangle(cornerRadius: 2)
                                                 .fill(selectedLeague?.id == league.id ? Color.green : Color.white.opacity(0.15))
                                                 .frame(width: 3, height: 20)
-                                            VStack(alignment: .leading, spacing: 1) {
-                                                Text(league.name)
-                                                    .font(.caption)
-                                                    .fontWeight(.semibold)
-                                                    .lineLimit(1)
-                                                Text("Tier \(league.tier)")
-                                                    .font(.system(size: 9))
-                                                    .foregroundStyle(.secondary)
-                                            }
+                                            Text(league.name)
+                                                .font(.caption)
+                                                .fontWeight(.semibold)
+                                                .lineLimit(1)
                                             Spacer()
                                         }
                                         .padding(.horizontal, 10)
@@ -211,10 +206,13 @@ struct ClubCard: View {
                     Circle()
                         .fill(
                             LinearGradient(
-                                colors: [.green.opacity(0.3), .green.opacity(0.1)],
+                                colors: [club.primarySwiftUIColor.opacity(0.5), club.primarySwiftUIColor.opacity(0.2)],
                                 startPoint: .topLeading, endPoint: .bottomTrailing
                             )
                         )
+                        .frame(width: 44, height: 44)
+                    Circle()
+                        .stroke(club.primarySwiftUIColor.opacity(0.7), lineWidth: 2)
                         .frame(width: 44, height: 44)
 
                     Text(club.shortName)
