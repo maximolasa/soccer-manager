@@ -54,7 +54,7 @@ struct GameDataGenerator {
         return max(500, Int(baseWage * ageFactor))
     }
 
-    /// Estimate total wage budget for a club: covers ~60 weeks of prime-age wages.
+    /// Estimate total wage budget for a club: covers ~52 weeks (1 season) of wages.
     /// Uses midpoint offsets from eaSquadRatings distribution.
     static func estimateWageBudget(clubRating: Int) -> Int {
         let midOffsets = [7, 5, 4, 3, 2, 1, -1, -2, -2, -3, -4, -4,
@@ -62,9 +62,9 @@ struct GameDataGenerator {
         var weeklyTotal = 0
         for offset in midOffsets {
             let ovr = max(25, min(99, clubRating + offset))
-            weeklyTotal += Int(100.0 * exp(0.122 * Double(ovr - 35)))
+            weeklyTotal += max(500, Int(100.0 * exp(0.122 * Double(ovr - 35))))
         }
-        return weeklyTotal * 60
+        return weeklyTotal * 52
     }
 
     static func generatePlayer(clubId: UUID?, position: PlayerPosition, quality: Int, variance: Int = 12) -> Player {

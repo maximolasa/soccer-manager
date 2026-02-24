@@ -872,25 +872,23 @@ class GameViewModel {
         }
     }
 
-    /// Move money from transfer budget to salary budget
-    /// EA FC 25 ratio: 1M transfer ≈ 19.2K/wk salary (factor of 52)
+    /// Move money from transfer budget to salary fund (1:1, both are cash pools)
     func transferToSalary(amount: Int) -> Bool {
         guard let club = selectedClub else { return false }
         guard amount > 0, club.budget >= amount else { return false }
-        let salaryGain = amount / 52
         club.budget -= amount
-        club.wageBudget += salaryGain
+        club.wageBudget += amount
         return true
     }
 
-    /// Move money from salary budget to transfer budget
-    /// EA FC 25 ratio: 1K/wk salary ≈ 52K transfer
+    /// Move money from salary fund to transfer budget (1:1)
+    /// Cannot move below current weekly wage obligations
     func salaryToTransfer(amount: Int) -> Bool {
         guard let club = selectedClub else { return false }
         guard amount > 0, club.wageBudget >= amount else { return false }
-        let transferGain = amount * 52
+        guard club.wageBudget - amount >= totalWeeklyWages else { return false }
         club.wageBudget -= amount
-        club.budget += transferGain
+        club.budget += amount
         return true
     }
 

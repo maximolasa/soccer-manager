@@ -4,14 +4,22 @@ struct FinanceView: View {
     @State var viewModel: GameViewModel
     @State private var sliderValue: Double = 0.5
 
-    /// EA FC 25 ratio: 1M transfer ≈ 19.2K/week salary (52 weeks in a season)
-    private let conversionFactor: Double = 52.0
-
-    /// Total pool in "transfer equivalent" terms
+    /// Total pool: both are cash pools, combined 1:1
     private var totalPool: Double {
         guard let club = viewModel.selectedClub else { return 0 }
-        // Convert wage budget to transfer equivalent: wageBudget * conversionFactor
-        return Double(club.budget) + Double(club.wageBudget) * conversionFactor
+        return Double(club.budget) + Double(club.wageBudget)
+    }
+
+    /// Minimum wage budget = current weekly obligations (can't cut wages below actual spend)
+    private var minWageBudget: Int {
+        viewModel.totalWeeklyWages
+    }
+
+    /// Maximum slider position: can't push salary below minWageBudget
+    private var maxSliderValue: Double {
+        let total = totalPool
+        guard total > 0 else { return 1.0 }
+        return max(0, min(1.0, (total - Double(minWageBudget)) / total))
     }
 
     var body: some View {
@@ -36,9 +44,9 @@ struct FinanceView: View {
 
     private func initSlider() {
         guard let club = viewModel.selectedClub else { return }
-        let total = Double(club.budget) + Double(club.wageBudget) * conversionFactor
+        let total = Double(club.budget) + Double(club.wageBudget)
         guard total > 0 else { sliderValue = 0.5; return }
-        sliderValue = Double(club.budget) / total
+        sliderValue = min(maxSliderValue, Double(club.budget) / total)
     }
 
     // MARK: - Header
@@ -103,15 +111,16 @@ struct FinanceView: View {
             sectionHeader("BUDGET ALLOCATION", icon: "slider.horizontal.3", color: .purple)
 
             HStack {
-                Text("Drag to reallocate funds. Ratio: 1M transfer ≈ \(viewModel.formatCurrency(Int(1_000_000 / conversionFactor)))/wk salary")
+                Text("Drag to reallocate funds between transfer and salary pools")
                     .font(.system(size: 9))
                     .foregroundStyle(.white.opacity(0.4))
                 Spacer()
             }
 
             if let club = viewModel.selectedClub {
-                let newTransfer = Int(totalPool * sliderValue)
-                let newSalary = Int(totalPool * (1.0 - sliderValue) / conversionFactor)
+                let clampedSlider = min(sliderValue, maxSliderValue)
+                let newTransfer = Int(totalPool * clampedSlider)
+                let newSalary = max(minWageBudget, Int(totalPool * (1.0 - clampedSlider)))
 
                 // Labels above bar
                 HStack {
@@ -167,7 +176,7 @@ struct FinanceView: View {
                             .gesture(
                                 DragGesture(minimumDistance: 0)
                                     .onChanged { value in
-                                        let newValue = max(0.0, min(1.0, value.location.x / barWidth))
+                                        let newValue = max(0.0, min(maxSliderValue, value.location.x / barWidth))
                                         sliderValue = newValue
                                     }
                                     .onEnded { _ in
@@ -234,8 +243,9 @@ struct FinanceView: View {
 
     private func applyAllocation() {
         guard let club = viewModel.selectedClub else { return }
-        let newTransfer = Int(totalPool * sliderValue)
-        let newSalary = Int(totalPool * (1.0 - sliderValue) / conversionFactor)
+        let clamped = min(sliderValue, maxSliderValue)
+        let newTransfer = Int(totalPool * clamped)
+        let newSalary = max(minWageBudget, Int(totalPool * (1.0 - clamped)))
         club.budget = newTransfer
         club.wageBudget = newSalary
     }
