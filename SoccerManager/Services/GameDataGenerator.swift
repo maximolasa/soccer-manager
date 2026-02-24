@@ -32,6 +32,41 @@ struct GameDataGenerator {
         "Palmer", "Watkins", "Saka", "Rice", "Foden", "Gordon", "Gibbs", "Gallagher"
     ]
 
+    // MARK: - FIFA-Style Financial Helpers
+
+    /// FIFA-style exponential wage curve.
+    /// Prime-age (24-29): 99 OVR ≈ €260K/wk, 85 OVR ≈ €45K/wk, 70 OVR ≈ €6K/wk, 50 OVR ≈ €500/wk
+    static func fifaWage(overall: Int, age: Int) -> Int {
+        let baseWage = 100.0 * exp(0.122 * Double(overall - 35))
+
+        let ageFactor: Double
+        switch age {
+        case ...19:   ageFactor = 0.40
+        case 20...21: ageFactor = 0.60
+        case 22...23: ageFactor = 0.80
+        case 24...29: ageFactor = 1.00
+        case 30...31: ageFactor = 0.92
+        case 32...33: ageFactor = 0.82
+        case 34...35: ageFactor = 0.70
+        default:      ageFactor = 0.50
+        }
+
+        return max(500, Int(baseWage * ageFactor))
+    }
+
+    /// Estimate total wage budget for a club: covers ~60 weeks of prime-age wages.
+    /// Uses midpoint offsets from eaSquadRatings distribution.
+    static func estimateWageBudget(clubRating: Int) -> Int {
+        let midOffsets = [7, 5, 4, 3, 2, 1, -1, -2, -2, -3, -4, -4,
+                          -5, -6, -7, -12, -14, -16, -18, -20, -22, -24, -26, -29]
+        var weeklyTotal = 0
+        for offset in midOffsets {
+            let ovr = max(25, min(99, clubRating + offset))
+            weeklyTotal += Int(100.0 * exp(0.122 * Double(ovr - 35)))
+        }
+        return weeklyTotal * 60
+    }
+
     static func generatePlayer(clubId: UUID?, position: PlayerPosition, quality: Int, variance: Int = 12) -> Player {
         let firstName = firstNames.randomElement()!
         let lastName = lastNames.randomElement()!
@@ -77,7 +112,7 @@ struct GameDataGenerator {
             physical: physical
         )
 
-        let wage = max(1000, overall * overall * 5)
+        let wage = fifaWage(overall: overall, age: age)
         let player = Player(
             firstName: firstName,
             lastName: lastName,
@@ -609,7 +644,7 @@ struct GameDataGenerator {
                     leagueId: league.id,
                     rating: clubData.rating,
                     budget: clubData.budget,
-                    wageBudget: clubData.budget / 3,
+                    wageBudget: estimateWageBudget(clubRating: clubData.rating),
                     stadiumName: clubData.stadium,
                     stadiumCapacity: clubData.capacity,
                     primaryColor: clubData.primary,
