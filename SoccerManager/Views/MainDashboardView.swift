@@ -301,8 +301,8 @@ struct MainDashboardView: View {
         Button {
             viewModel.currentScreen = .mail
         } label: {
-            DashboardCard(title: "MAIL", icon: "envelope.fill", accentColor: .orange) {
-                VStack(spacing: 3) {
+            DashboardCard(title: "MAIL", icon: "envelope.fill", accentColor: .orange, expandVertically: true) {
+                VStack(alignment: .leading, spacing: 3) {
                     if viewModel.mailMessages.isEmpty {
                         Text("No mail")
                             .font(.system(size: 10))
