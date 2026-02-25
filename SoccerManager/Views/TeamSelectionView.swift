@@ -50,26 +50,20 @@ struct TeamSelectionView: View {
 
                 HStack(spacing: 0) {
                     leagueSidebar
-
-                    ZStack(alignment: .trailing) {
-                        clubGrid
-
-                        if let club = previewClub {
-                            clubPreviewPanel(club)
-                                .transition(.move(edge: .trailing).combined(with: .opacity))
-                                .zIndex(1)
-                        }
+                    clubGrid
+                    if let club = previewClub {
+                        clubPreviewPanel(club)
+                            .transition(.move(edge: .trailing).combined(with: .opacity))
                     }
                 }
             }
-            .allowsHitTesting(!showSigningOverlay)
 
             // Contract signing overlay
             if showSigningOverlay, let club = signingClub {
                 contractSigningOverlay(club)
             }
         }
-        .animation(.spring(duration: 0.3, bounce: 0.15), value: previewClub?.id)
+        .animation(.spring(duration: 0.35), value: previewClub?.id)
     }
 
     // MARK: - Header

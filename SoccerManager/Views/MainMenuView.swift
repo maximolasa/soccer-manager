@@ -9,10 +9,6 @@ struct MainMenuView: View {
 
     var body: some View {
         ZStack {
-            // Background
-            Color(red: 0.04, green: 0.06, blue: 0.09)
-                .ignoresSafeArea()
-
             // Subtle pitch lines in the background
             pitchBackground
                 .opacity(0.04)
@@ -38,6 +34,8 @@ struct MainMenuView: View {
                     .frame(maxWidth: .infinity)
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color(red: 0.04, green: 0.06, blue: 0.09).ignoresSafeArea())
         .onAppear {
             withAnimation(.easeInOut(duration: 3).repeatForever(autoreverses: true)) {
                 glowPhase = true
@@ -102,22 +100,6 @@ struct MainMenuView: View {
                 .tracking(3)
 
             Spacer()
-
-            // Footer
-            HStack(spacing: 16) {
-                Text("v1.0")
-                    .font(.system(size: 10))
-                    .foregroundStyle(.white.opacity(0.2))
-
-                Circle()
-                    .fill(Color.white.opacity(0.15))
-                    .frame(width: 3, height: 3)
-
-                Text("Made with SwiftUI")
-                    .font(.system(size: 10))
-                    .foregroundStyle(.white.opacity(0.2))
-            }
-            .padding(.bottom, 20)
         }
     }
 
@@ -142,7 +124,7 @@ struct MainMenuView: View {
 
             menuButton(
                 title: "Continue Career",
-                subtitle: "Coming soon",
+                subtitle: "No saved career found",
                 icon: "arrow.clockwise.circle.fill",
                 color: .cyan,
                 isDisabled: true
@@ -150,7 +132,7 @@ struct MainMenuView: View {
 
             menuButton(
                 title: "Load Career",
-                subtitle: "Coming soon",
+                subtitle: "No saved career found",
                 icon: "folder.circle.fill",
                 color: .orange,
                 isDisabled: true
@@ -224,15 +206,7 @@ struct MainMenuView: View {
                         .foregroundStyle(.white.opacity(0.3))
                 }
 
-                if isDisabled {
-                    Text("SOON")
-                        .font(.system(size: 8, weight: .bold))
-                        .foregroundStyle(.white.opacity(0.2))
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(Color.white.opacity(0.06))
-                        .clipShape(.capsule)
-                }
+
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 14)
