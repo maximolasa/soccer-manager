@@ -11,11 +11,9 @@ struct TeamSelectionView: View {
     @State private var showSigningOverlay = false
     @State private var signingPhase: SigningPhase = .fadeIn
     @State private var signingClub: Club?
-    @State private var ringScale: CGFloat = 0.3
-    @State private var ringOpacity: Double = 0
 
     enum SigningPhase {
-        case fadeIn, reveal, badge, welcome
+        case fadeIn, penDown, signed, welcome
     }
 
     var countries: [(name: String, emoji: String)] {
@@ -53,13 +51,11 @@ struct TeamSelectionView: View {
                 HStack(spacing: 0) {
                     leagueSidebar
                     clubGrid
+                    if let club = previewClub {
+                        clubPreviewPanel(club)
+                            .transition(.move(edge: .trailing).combined(with: .opacity))
+                    }
                 }
-            }
-
-            // Club preview overlay
-            if let club = previewClub {
-                clubPreviewOverlay(club)
-                    .transition(.opacity)
             }
 
             // Contract signing overlay
@@ -204,19 +200,27 @@ struct TeamSelectionView: View {
                     .padding(.horizontal, 16)
                     .padding(.vertical, 8)
 
-                    ScrollView {
-                        LazyVGrid(columns: [
-                            GridItem(.adaptive(minimum: 140), spacing: 10)
-                        ], spacing: 10) {
-                            ForEach(filteredClubs) { club in
-                                ClubCard(club: club, isSelected: previewClub?.id == club.id) {
-                                    withAnimation(.spring(duration: 0.3)) {
-                                        previewClub = club
+                    if let selected = previewClub {
+                        // Show only the selected club centered
+                        Spacer()
+                        ClubCard(club: selected, isSelected: true) { }
+                            .frame(width: 150)
+                        Spacer()
+                    } else {
+                        ScrollView {
+                            LazyVGrid(columns: [
+                                GridItem(.adaptive(minimum: 140), spacing: 10)
+                            ], spacing: 10) {
+                                ForEach(filteredClubs) { club in
+                                    ClubCard(club: club, isSelected: false) {
+                                        withAnimation(.spring(duration: 0.3)) {
+                                            previewClub = club
+                                        }
                                     }
                                 }
                             }
+                            .padding(12)
                         }
-                        .padding(12)
                     }
                 }
             } else {
@@ -234,177 +238,128 @@ struct TeamSelectionView: View {
         .background(Color(white: 0.05))
     }
 
-    // MARK: - Club Preview Overlay
+    // MARK: - Club Preview Panel
 
-    private func clubPreviewOverlay(_ club: Club) -> some View {
+    private func clubPreviewPanel(_ club: Club) -> some View {
         let leagueName = viewModel.leagues.first { $0.id == club.leagueId }?.name ?? ""
 
-        return ZStack {
-            // Dimmed tappable background to dismiss
-            Color.black.opacity(0.6)
-                .ignoresSafeArea()
-                .onTapGesture {
+        return VStack(spacing: 0) {
+            // Close button
+            HStack {
+                Spacer()
+                Button {
                     withAnimation(.spring(duration: 0.3, bounce: 0.15)) {
                         previewClub = nil
                     }
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(.white.opacity(0.5))
+                        .padding(6)
+                        .background(Color.white.opacity(0.1))
+                        .clipShape(Circle())
                 }
-
-            // Card
-            VStack(spacing: 0) {
-                // ── Top: club color accent bar ──
-                Rectangle()
-                    .fill(
-                        LinearGradient(
-                            colors: [club.primarySwiftUIColor, club.secondarySwiftUIColor.opacity(0.6)],
-                            startPoint: .leading, endPoint: .trailing
-                        )
-                    )
-                    .frame(height: 4)
-
-                // ── Header: badge + name ──
-                VStack(spacing: 8) {
-                    ZStack {
-                        Circle()
-                            .fill(
-                                RadialGradient(
-                                    colors: [club.primarySwiftUIColor.opacity(0.5), club.primarySwiftUIColor.opacity(0.08)],
-                                    center: .center, startRadius: 0, endRadius: 40
-                                )
-                            )
-                            .frame(width: 70, height: 70)
-
-                        Circle()
-                            .stroke(
-                                LinearGradient(
-                                    colors: [club.primarySwiftUIColor.opacity(0.9), club.secondarySwiftUIColor.opacity(0.5)],
-                                    startPoint: .topLeading, endPoint: .bottomTrailing
-                                ),
-                                lineWidth: 2.5
-                            )
-                            .frame(width: 70, height: 70)
-
-                        Text(club.shortName)
-                            .font(.system(size: 20, weight: .black))
-                            .foregroundStyle(.white)
-                    }
-
-                    Text(club.name)
-                        .font(.system(size: 18, weight: .bold))
-                        .foregroundStyle(.white)
-
-                    Text(leagueName)
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(.white.opacity(0.45))
-                }
-                .padding(.top, 18)
-                .padding(.bottom, 14)
-
-                // ── Stats grid ──
-                VStack(spacing: 1) {
-                    // Row 1: Rating & Formation
-                    HStack(spacing: 1) {
-                        statCell(icon: "star.fill", label: "Rating", value: "\(club.rating)", color: .yellow)
-                        statCell(icon: "rectangle.split.3x3", label: "Formation", value: club.formation, color: .purple)
-                    }
-
-                    // Row 2: Budget & Wages
-                    HStack(spacing: 1) {
-                        statCell(icon: "banknote", label: "Transfer Budget", value: formatCurrencyLocal(club.budget), color: .cyan)
-                        statCell(icon: "creditcard", label: "Wages /wk", value: formatCurrencyLocal(club.wageBudget / 52), color: .orange)
-                    }
-
-                    // Row 3: Stadium & Capacity
-                    HStack(spacing: 1) {
-                        statCell(icon: "building.2", label: "Stadium", value: club.stadiumName, color: .green)
-                        statCell(icon: "person.3.fill", label: "Capacity", value: "\(club.stadiumCapacity / 1000)K", color: .green)
-                    }
-
-                    // Row 4: Trophies
-                    HStack(spacing: 1) {
-                        statCell(icon: "trophy.fill", label: "League Titles", value: "\(club.leagueTitles)", color: .yellow)
-                        statCell(icon: "trophy", label: "Cup Wins", value: "\(club.cupWins)", color: .yellow)
-                    }
-                }
-                .clipShape(.rect(cornerRadius: 8))
-                .padding(.horizontal, 16)
-
-                // ── Buttons ──
-                VStack(spacing: 8) {
-                    Button {
-                        signContract(club)
-                    } label: {
-                        HStack(spacing: 8) {
-                            Image(systemName: "pencil.line")
-                                .font(.system(size: 13, weight: .bold))
-                            Text("Sign Contract")
-                                .font(.system(size: 14, weight: .bold))
-                        }
-                        .foregroundStyle(.black)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 13)
-                        .background(
-                            LinearGradient(
-                                colors: [Color.green, Color.green.opacity(0.8)],
-                                startPoint: .leading, endPoint: .trailing
-                            )
-                        )
-                        .clipShape(.rect(cornerRadius: 12))
-                    }
-                    .buttonStyle(.plain)
-
-                    Button {
-                        withAnimation(.spring(duration: 0.3, bounce: 0.15)) {
-                            previewClub = nil
-                        }
-                    } label: {
-                        Text("Back")
-                            .font(.system(size: 13, weight: .medium))
-                            .foregroundStyle(.white.opacity(0.5))
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 10)
-                            .background(Color.white.opacity(0.06))
-                            .clipShape(.rect(cornerRadius: 10))
-                    }
-                    .buttonStyle(.plain)
-                }
-                .padding(.horizontal, 16)
-                .padding(.top, 16)
-                .padding(.bottom, 18)
+                .buttonStyle(.plain)
             }
-            .background(Color(red: 0.07, green: 0.09, blue: 0.12))
-            .clipShape(.rect(cornerRadius: 16))
-            .overlay(
-                RoundedRectangle(cornerRadius: 16)
-                    .stroke(club.primarySwiftUIColor.opacity(0.2), lineWidth: 1)
-            )
-            .shadow(color: club.primarySwiftUIColor.opacity(0.15), radius: 30)
-            .shadow(color: .black.opacity(0.6), radius: 20, y: 10)
-            .frame(maxWidth: 340)
-            .padding(.horizontal, 24)
-            .transition(.scale(scale: 0.85).combined(with: .opacity))
+            .padding(.trailing, 10)
+            .padding(.top, 8)
+
+            // Club header
+            VStack(spacing: 10) {
+                ZStack {
+                    Circle()
+                        .fill(
+                            RadialGradient(
+                                colors: [club.primarySwiftUIColor.opacity(0.6), club.primarySwiftUIColor.opacity(0.1)],
+                                center: .center, startRadius: 0, endRadius: 40
+                            )
+                        )
+                        .frame(width: 64, height: 64)
+                    Circle()
+                        .stroke(club.primarySwiftUIColor.opacity(0.8), lineWidth: 2)
+                        .frame(width: 64, height: 64)
+                    Text(club.shortName)
+                        .font(.system(size: 18, weight: .black))
+                        .foregroundStyle(.white)
+                }
+
+                Text(club.name)
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundStyle(.white)
+
+                Text(leagueName)
+                    .font(.system(size: 11))
+                    .foregroundStyle(.white.opacity(0.5))
+            }
+            .padding(.top, 4)
+            .padding(.bottom, 14)
+
+            Divider().overlay(Color.white.opacity(0.1))
+
+            // Stats
+            VStack(spacing: 8) {
+                previewStatRow("Rating", "\(club.rating)", .yellow, "star.fill")
+                previewStatRow("Transfer Budget", formatCurrencyLocal(club.budget), .cyan, "banknote")
+                previewStatRow("Salary Budget", formatCurrencyLocal(club.wageBudget / 52) + "/wk", .orange, "creditcard")
+                previewStatRow("Stadium", club.stadiumName, .green, "building.2")
+                previewStatRow("Capacity", "\(club.stadiumCapacity / 1000)K", .green, "person.3.fill")
+                previewStatRow("Formation", club.formation, .purple, "rectangle.split.3x3")
+                previewStatRow("League Titles", "\(club.leagueTitles)", .yellow, "trophy.fill")
+                previewStatRow("Cup Wins", "\(club.cupWins)", .yellow, "trophy")
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+
+            Spacer(minLength: 4)
+
+            // Sign contract button
+            Button {
+                signContract(club)
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: "pencil.line")
+                        .font(.system(size: 14, weight: .bold))
+                    Text("Sign Contract")
+                        .font(.system(size: 14, weight: .bold))
+                }
+                .foregroundStyle(.black)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
+                .background(Color.green)
+                .clipShape(.rect(cornerRadius: 12))
+            }
+            .buttonStyle(.plain)
+            .padding(16)
         }
+        .frame(width: 260)
+        .background(Color(white: 0.07))
+        .overlay(
+            Rectangle()
+                .fill(Color.white.opacity(0.06))
+                .frame(width: 1),
+            alignment: .leading
+        )
+        .shadow(color: .black.opacity(0.5), radius: 16, x: -6)
     }
 
-    private func statCell(icon: String, label: String, value: String, color: Color) -> some View {
-        VStack(spacing: 6) {
+    private func previewStatRow(_ label: String, _ value: String, _ color: Color, _ icon: String) -> some View {
+        HStack(spacing: 10) {
             Image(systemName: icon)
-                .font(.system(size: 14))
+                .font(.system(size: 11))
                 .foregroundStyle(color)
-
-            Text(value)
-                .font(.system(size: 13, weight: .bold, design: .monospaced))
-                .foregroundStyle(.white)
-                .lineLimit(1)
-                .minimumScaleFactor(0.7)
+                .frame(width: 18)
 
             Text(label)
-                .font(.system(size: 9, weight: .medium))
-                .foregroundStyle(.white.opacity(0.4))
-                .lineLimit(1)
+                .font(.system(size: 11))
+                .foregroundStyle(.white.opacity(0.6))
+
+            Spacer()
+
+            Text(value)
+                .font(.system(size: 12, weight: .bold, design: .monospaced))
+                .foregroundStyle(color)
         }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 10)
-        .background(Color.white.opacity(0.04))
+        .padding(.vertical, 4)
     }
 
     private func formatCurrencyLocal(_ amount: Int) -> String {
@@ -421,34 +376,26 @@ struct TeamSelectionView: View {
     private func signContract(_ club: Club) {
         signingClub = club
         signingPhase = .fadeIn
-        ringScale = 0.3
-        ringOpacity = 0
-
-        withAnimation(.easeIn(duration: 0.5)) {
+        withAnimation(.easeIn(duration: 0.4)) {
             showSigningOverlay = true
         }
 
-        // Phase 1: Color ring expands
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-            withAnimation(.spring(duration: 0.7, bounce: 0.2)) {
-                signingPhase = .reveal
-                ringScale = 1.0
-                ringOpacity = 1.0
+        // Phase sequence
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+            withAnimation(.easeInOut(duration: 0.5)) {
+                signingPhase = .penDown
             }
         }
-        // Phase 2: Badge appears
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.3) {
-            withAnimation(.spring(duration: 0.5, bounce: 0.3)) {
-                signingPhase = .badge
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.4) {
+            withAnimation(.spring(duration: 0.4)) {
+                signingPhase = .signed
             }
         }
-        // Phase 3: Welcome text
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-            withAnimation(.easeInOut(duration: 0.6)) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.2) {
+            withAnimation(.easeInOut(duration: 0.5)) {
                 signingPhase = .welcome
             }
         }
-        // Start game
         DispatchQueue.main.asyncAfter(deadline: .now() + 3.5) {
             viewModel.startNewGame(clubId: club.id)
         }
@@ -456,121 +403,129 @@ struct TeamSelectionView: View {
 
     private func contractSigningOverlay(_ club: Club) -> some View {
         ZStack {
-            // Dark background
             Color.black
-                .opacity(signingPhase == .fadeIn ? 0.6 : 0.95)
+                .opacity(signingPhase == .fadeIn ? 0.7 : 0.92)
                 .ignoresSafeArea()
-                .animation(.easeIn(duration: 0.5), value: signingPhase)
+                .animation(.easeIn(duration: 0.4), value: signingPhase)
 
-            // Expanding color ring
-            Circle()
-                .stroke(
-                    AngularGradient(
-                        colors: [
-                            club.primarySwiftUIColor,
-                            club.primarySwiftUIColor.opacity(0.3),
-                            club.secondarySwiftUIColor,
-                            club.secondarySwiftUIColor.opacity(0.3),
-                            club.primarySwiftUIColor
-                        ],
-                        center: .center
-                    ),
-                    lineWidth: signingPhase == .reveal || signingPhase == .badge || signingPhase == .welcome ? 4 : 60
-                )
-                .frame(width: 160, height: 160)
-                .scaleEffect(ringScale)
-                .opacity(ringOpacity)
-                .blur(radius: signingPhase == .fadeIn ? 10 : 0)
-
-            // Soft glow behind badge
-            if signingPhase == .badge || signingPhase == .welcome {
-                Circle()
-                    .fill(
-                        RadialGradient(
-                            colors: [club.primarySwiftUIColor.opacity(0.35), .clear],
-                            center: .center, startRadius: 0, endRadius: 120
-                        )
-                    )
-                    .frame(width: 240, height: 240)
-                    .transition(.opacity)
-            }
-
-            VStack(spacing: 0) {
-                Spacer()
-
-                // Badge
-                if signingPhase == .badge || signingPhase == .welcome {
-                    ZStack {
-                        Circle()
-                            .fill(
-                                RadialGradient(
-                                    colors: [club.primarySwiftUIColor.opacity(0.7), club.primarySwiftUIColor.opacity(0.15)],
-                                    center: .center, startRadius: 0, endRadius: 55
-                                )
-                            )
-                            .frame(width: 100, height: 100)
-
-                        Circle()
-                            .stroke(
-                                LinearGradient(
-                                    colors: [club.primarySwiftUIColor, club.secondarySwiftUIColor],
-                                    startPoint: .topLeading, endPoint: .bottomTrailing
-                                ),
-                                lineWidth: 3
-                            )
-                            .frame(width: 100, height: 100)
-
-                        Text(club.shortName)
-                            .font(.system(size: 28, weight: .black))
-                            .foregroundStyle(.white)
-                    }
-                    .transition(.scale(scale: 0.4).combined(with: .opacity))
-                }
-
-                // Welcome text
+            VStack(spacing: 24) {
                 if signingPhase == .welcome {
-                    VStack(spacing: 10) {
-                        Text("WELCOME TO")
-                            .font(.system(size: 12, weight: .bold))
-                            .tracking(6)
-                            .foregroundStyle(.white.opacity(0.5))
-                            .padding(.top, 28)
-
-                        Text(club.name.uppercased())
-                            .font(.system(size: 24, weight: .black))
-                            .tracking(2)
-                            .foregroundStyle(
-                                LinearGradient(
-                                    colors: [.white, club.primarySwiftUIColor.opacity(0.8)],
-                                    startPoint: .leading, endPoint: .trailing
-                                )
-                            )
-                            .multilineTextAlignment(.center)
-
-                        HStack(spacing: 0) {
-                            Rectangle()
+                    // Welcome phase — club badge + name
+                    VStack(spacing: 16) {
+                        ZStack {
+                            Circle()
+                                .fill(club.primarySwiftUIColor.opacity(0.3))
+                                .frame(width: 100, height: 100)
+                                .scaleEffect(1.2)
+                                .blur(radius: 20)
+                            Circle()
                                 .fill(
-                                    LinearGradient(colors: [.clear, club.primarySwiftUIColor.opacity(0.6)], startPoint: .leading, endPoint: .trailing)
+                                    RadialGradient(
+                                        colors: [club.primarySwiftUIColor.opacity(0.7), club.primarySwiftUIColor.opacity(0.2)],
+                                        center: .center, startRadius: 0, endRadius: 50
+                                    )
                                 )
-                                .frame(width: 60, height: 1)
-
-                            Text("  NEW MANAGER  ")
-                                .font(.system(size: 10, weight: .semibold))
-                                .tracking(3)
-                                .foregroundStyle(club.primarySwiftUIColor.opacity(0.7))
-
-                            Rectangle()
-                                .fill(
-                                    LinearGradient(colors: [club.primarySwiftUIColor.opacity(0.6), .clear], startPoint: .leading, endPoint: .trailing)
-                                )
-                                .frame(width: 60, height: 1)
+                                .frame(width: 80, height: 80)
+                            Circle()
+                                .stroke(club.primarySwiftUIColor, lineWidth: 3)
+                                .frame(width: 80, height: 80)
+                            Text(club.shortName)
+                                .font(.system(size: 24, weight: .black))
+                                .foregroundStyle(.white)
                         }
-                        .padding(.top, 6)
-                    }
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
-                }
+                        .transition(.scale.combined(with: .opacity))
 
-                Spacer()
+                        Text("Welcome to \(club.name)")
+                            .font(.system(size: 22, weight: .bold))
+                            .foregroundStyle(.white)
+                            .transition(.opacity)
+
+                        Text("You are the new manager")
+                            .font(.system(size: 14))
+                            .foregroundStyle(.white.opacity(0.5))
+                            .transition(.opacity)
+                    }
+                    .transition(.opacity.combined(with: .scale(scale: 0.9)))
+                } else {
+                    // Contract signing animation
+                    VStack(spacing: 20) {
+                        // Paper
+                        VStack(spacing: 12) {
+                            Text("MANAGER CONTRACT")
+                                .font(.system(size: 10, weight: .bold))
+                                .foregroundStyle(.black.opacity(0.3))
+                                .tracking(3)
+
+                            Divider().frame(width: 180)
+
+                            VStack(spacing: 6) {
+                                Text(club.name)
+                                    .font(.system(size: 16, weight: .bold))
+                                    .foregroundStyle(.black)
+
+                                Text("hereby appoints")
+                                    .font(.system(size: 10))
+                                    .foregroundStyle(.black.opacity(0.5))
+
+                                Text("YOU")
+                                    .font(.system(size: 14, weight: .black))
+                                    .foregroundStyle(.black)
+
+                                Text("as First Team Manager")
+                                    .font(.system(size: 10))
+                                    .foregroundStyle(.black.opacity(0.5))
+                            }
+
+                            Spacer().frame(height: 8)
+
+                            // Signature line
+                            VStack(spacing: 2) {
+                                if signingPhase == .penDown || signingPhase == .signed {
+                                    // Signature scribble
+                                    Text("~ Manager ~")
+                                        .font(.system(size: 14, design: .serif))
+                                        .italic()
+                                        .foregroundStyle(.blue.opacity(0.7))
+                                        .transition(.opacity.combined(with: .offset(y: 5)))
+                                }
+                                Rectangle()
+                                    .fill(Color.black.opacity(0.2))
+                                    .frame(width: 140, height: 1)
+                                Text("Signature")
+                                    .font(.system(size: 8))
+                                    .foregroundStyle(.black.opacity(0.3))
+                            }
+
+                            if signingPhase == .signed {
+                                // Stamp
+                                Text("✓ SIGNED")
+                                    .font(.system(size: 12, weight: .black))
+                                    .foregroundStyle(.red.opacity(0.7))
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 4)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 4)
+                                            .stroke(.red.opacity(0.5), lineWidth: 2)
+                                    )
+                                    .rotationEffect(.degrees(-8))
+                                    .transition(.scale.combined(with: .opacity))
+                            }
+                        }
+                        .padding(24)
+                        .frame(width: 260)
+                        .background(Color(white: 0.95))
+                        .clipShape(.rect(cornerRadius: 8))
+                        .shadow(color: .black.opacity(0.5), radius: 20, y: 10)
+
+                        // Pen icon
+                        if signingPhase == .penDown {
+                            Image(systemName: "pencil.and.scribble")
+                                .font(.system(size: 28))
+                                .foregroundStyle(.white.opacity(0.6))
+                                .transition(.opacity.combined(with: .offset(y: 10)))
+                        }
+                    }
+                }
             }
         }
     }
