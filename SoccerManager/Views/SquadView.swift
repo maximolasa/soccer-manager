@@ -36,7 +36,6 @@ struct SquadView: View {
             list = list.filter { $0.position == pos }
         }
         guard let sortBy else {
-            // Default: sort by position order
             let order = Self.positionOrder
             list.sort {
                 let i0 = order.firstIndex(of: $0.position) ?? 99
@@ -55,13 +54,13 @@ struct SquadView: View {
                 return asc ? i0 > i1 : i0 < i1
             }
         case .overall:
-            list.sort { asc ? $0.stats.overall < $1.stats.overall : $0.stats.overall > $1.stats.overall }
+            list.sort { asc ? $0.overall < $1.overall : $0.overall > $1.overall }
         case .offensive:
-            list.sort { asc ? $0.stats.offensive < $1.stats.offensive : $0.stats.offensive > $1.stats.offensive }
+            list.sort { asc ? $0.stats.attackAvg < $1.stats.attackAvg : $0.stats.attackAvg > $1.stats.attackAvg }
         case .defensive:
-            list.sort { asc ? $0.stats.defensive < $1.stats.defensive : $0.stats.defensive > $1.stats.defensive }
+            list.sort { asc ? $0.stats.defenseAvg < $1.stats.defenseAvg : $0.stats.defenseAvg > $1.stats.defenseAvg }
         case .physical:
-            list.sort { asc ? $0.stats.physical < $1.stats.physical : $0.stats.physical > $1.stats.physical }
+            list.sort { asc ? $0.stats.physicalAvg < $1.stats.physicalAvg : $0.stats.physicalAvg > $1.stats.physicalAvg }
         case .age:
             list.sort { asc ? $0.age > $1.age : $0.age < $1.age }
         case .goals:
@@ -75,18 +74,19 @@ struct SquadView: View {
     }
 
     var body: some View {
-        ZStack {
-            VStack(spacing: 0) {
-                headerBar
-                filtersBar
-                playerList
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(Color(red: 0.06, green: 0.08, blue: 0.1).ignoresSafeArea())
-
-            if let player = selectedPlayer {
-                playerDetailOverlay(player)
-            }
+        VStack(spacing: 0) {
+            headerBar
+            filtersBar
+            playerList
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color(red: 0.06, green: 0.08, blue: 0.1).ignoresSafeArea())
+        .fullScreenCover(item: $selectedPlayer) { player in
+            PlayerDetailView(
+                player: player,
+                context: .squad,
+                viewModel: viewModel
+            )
         }
     }
 
@@ -195,20 +195,20 @@ struct SquadView: View {
                 .foregroundStyle(.white.opacity(0.7))
                 .frame(width: 36)
 
-            statBadge(player.stats.overall)
+            statBadge(player.overall)
                 .frame(width: 40)
 
-            Text("\(player.stats.offensive)")
+            Text("\(player.stats.attackAvg)")
                 .font(.system(size: 10, design: .monospaced))
                 .foregroundStyle(.white.opacity(0.7))
                 .frame(width: 40)
 
-            Text("\(player.stats.defensive)")
+            Text("\(player.stats.defenseAvg)")
                 .font(.system(size: 10, design: .monospaced))
                 .foregroundStyle(.white.opacity(0.7))
                 .frame(width: 40)
 
-            Text("\(player.stats.physical)")
+            Text("\(player.stats.physicalAvg)")
                 .font(.system(size: 10, design: .monospaced))
                 .foregroundStyle(.white.opacity(0.7))
                 .frame(width: 40)
@@ -236,75 +236,6 @@ struct SquadView: View {
         .background(Color.white.opacity(0.02))
     }
 
-    private func playerDetailOverlay(_ player: Player) -> some View {
-        ZStack {
-            Color.black.opacity(0.7).ignoresSafeArea()
-                .onTapGesture { selectedPlayer = nil }
-
-            VStack(spacing: 12) {
-                HStack {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(player.fullName)
-                            .font(.title3)
-                            .fontWeight(.bold)
-                            .foregroundStyle(.white)
-                        Text("\(player.position.fullName) | Age: \(player.age)")
-                            .font(.subheadline)
-                            .foregroundStyle(.white.opacity(0.6))
-                    }
-                    Spacer()
-                    statBadge(player.stats.overall, large: true)
-                }
-
-                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
-                    statBox("Offensive", player.stats.offensive, .orange)
-                    statBox("Defensive", player.stats.defensive, .blue)
-                    statBox("Physical", player.stats.physical, .green)
-                }
-
-                HStack(spacing: 16) {
-                    miniStat("Goals", "\(player.goals)")
-                    miniStat("Assists", "\(player.assists)")
-                    miniStat("Matches", "\(player.matchesPlayed)")
-                    miniStat("Morale", "\(player.morale)")
-                    miniStat("Contract", "\(player.contractYearsLeft)yr")
-                    miniStat("Value", viewModel.formatCurrency(player.marketValue))
-                }
-
-                HStack(spacing: 12) {
-                    Button {
-                        viewModel.releasePlayer(player)
-                        selectedPlayer = nil
-                    } label: {
-                        Text("Release")
-                            .font(.caption)
-                            .fontWeight(.semibold)
-                            .foregroundStyle(.red)
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 6)
-                            .background(Color.red.opacity(0.15))
-                            .clipShape(.capsule)
-                    }
-
-                    Button { selectedPlayer = nil } label: {
-                        Text("Close")
-                            .font(.caption)
-                            .fontWeight(.semibold)
-                            .foregroundStyle(.white)
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 6)
-                            .background(Color.white.opacity(0.15))
-                            .clipShape(.capsule)
-                    }
-                }
-            }
-            .padding(20)
-            .background(Color(white: 0.12))
-            .clipShape(.rect(cornerRadius: 16))
-            .padding(.horizontal, 40)
-        }
-    }
-
     private func filterChip(_ text: String, isSelected: Bool, color: Color = .green, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Text(text)
@@ -326,34 +257,6 @@ struct SquadView: View {
             .padding(.vertical, large ? 4 : 2)
             .background(statColor(value).opacity(0.15))
             .clipShape(.rect(cornerRadius: large ? 8 : 4))
-    }
-
-    private func statBox(_ label: String, _ value: Int, _ color: Color) -> some View {
-        VStack(spacing: 4) {
-            Text(label)
-                .font(.caption2)
-                .foregroundStyle(.white.opacity(0.5))
-            Text("\(value)")
-                .font(.title3)
-                .fontWeight(.bold)
-                .foregroundStyle(color)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 8)
-        .background(color.opacity(0.1))
-        .clipShape(.rect(cornerRadius: 8))
-    }
-
-    private func miniStat(_ label: String, _ value: String) -> some View {
-        VStack(spacing: 2) {
-            Text(value)
-                .font(.caption)
-                .fontWeight(.bold)
-                .foregroundStyle(.white)
-            Text(label)
-                .font(.system(size: 8))
-                .foregroundStyle(.white.opacity(0.4))
-        }
     }
 
     private func statusIcon(_ player: Player) -> some View {

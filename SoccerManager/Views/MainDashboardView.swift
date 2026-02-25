@@ -134,7 +134,7 @@ struct MainDashboardView: View {
 
                             HStack(spacing: 16) {
                                 VStack(spacing: 6) {
-                                    clubBadge(match.homeClubName)
+                                    clubBadge(match.homeClubName, clubId: match.homeClubId)
                                     Text(match.homeClubName)
                                         .font(.caption)
                                         .fontWeight(.medium)
@@ -148,7 +148,7 @@ struct MainDashboardView: View {
                                     .foregroundStyle(.white.opacity(0.4))
 
                                 VStack(spacing: 6) {
-                                    clubBadge(match.awayClubName)
+                                    clubBadge(match.awayClubName, clubId: match.awayClubId)
                                     Text(match.awayClubName)
                                         .font(.caption)
                                         .fontWeight(.medium)
@@ -483,14 +483,15 @@ struct MainDashboardView: View {
         .background(Color(white: 0.08))
     }
 
-    private func clubBadge(_ name: String) -> some View {
-        ZStack {
+    private func clubBadge(_ name: String, clubId: UUID) -> some View {
+        let clubColor = viewModel.clubs.first(where: { $0.id == clubId })?.primarySwiftUIColor ?? .white
+        return ZStack {
             Circle()
-                .fill(Color.white.opacity(0.1))
+                .fill(clubColor.opacity(0.2))
                 .frame(width: 28, height: 28)
-            Text(String(name.prefix(2)).uppercased())
+            Text(String(name.prefix(3)).uppercased())
                 .font(.system(size: 9, weight: .black))
-                .foregroundStyle(.white)
+                .foregroundStyle(clubColor)
         }
     }
 

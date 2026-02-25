@@ -8,14 +8,16 @@ class MailMessage: Identifiable {
     let body: String
     let category: MailCategory
     var isRead: Bool
+    var offerId: UUID?  // Links to a TransferOffer if this is an offer mail
 
-    init(date: Date, subject: String, body: String, category: MailCategory = .general, isRead: Bool = false) {
+    init(date: Date, subject: String, body: String, category: MailCategory = .general, isRead: Bool = false, offerId: UUID? = nil) {
         self.id = UUID()
         self.date = date
         self.subject = subject
         self.body = body
         self.category = category
         self.isRead = isRead
+        self.offerId = offerId
     }
 }
 

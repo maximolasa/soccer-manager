@@ -2,6 +2,7 @@ import SwiftUI
 
 struct RivalSquadView: View {
     @State var viewModel: GameViewModel
+    @State private var selectedPlayer: Player?
 
     private static let positionOrder: [PlayerPosition] = [
         .goalkeeper, .centerBack, .leftBack, .rightBack,
@@ -26,6 +27,13 @@ struct RivalSquadView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color(red: 0.06, green: 0.08, blue: 0.1).ignoresSafeArea())
+        .fullScreenCover(item: $selectedPlayer) { player in
+            PlayerDetailView(
+                player: player,
+                context: .rival,
+                viewModel: viewModel
+            )
+        }
     }
 
     private var headerBar: some View {
@@ -121,7 +129,12 @@ struct RivalSquadView: View {
 
             LazyVStack(spacing: 0) {
                 ForEach(sortedRivalPlayers) { player in
-                    playerRow(player)
+                    Button {
+                        selectedPlayer = player
+                    } label: {
+                        playerRow(player)
+                    }
+                    .buttonStyle(.plain)
                 }
             }
         }
@@ -145,20 +158,20 @@ struct RivalSquadView: View {
                 .foregroundStyle(.white.opacity(0.7))
                 .frame(width: 32)
 
-            statBadge(player.stats.overall)
+            statBadge(player.overall)
                 .frame(width: 36)
 
-            Text("\(player.stats.offensive)")
+            Text("\(player.stats.attackAvg)")
                 .font(.system(size: 9, design: .monospaced))
                 .foregroundStyle(.white.opacity(0.7))
                 .frame(width: 36)
 
-            Text("\(player.stats.defensive)")
+            Text("\(player.stats.defenseAvg)")
                 .font(.system(size: 9, design: .monospaced))
                 .foregroundStyle(.white.opacity(0.7))
                 .frame(width: 36)
 
-            Text("\(player.stats.physical)")
+            Text("\(player.stats.physicalAvg)")
                 .font(.system(size: 9, design: .monospaced))
                 .foregroundStyle(.white.opacity(0.7))
                 .frame(width: 36)

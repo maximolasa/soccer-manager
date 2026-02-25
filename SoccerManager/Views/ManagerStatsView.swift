@@ -260,7 +260,7 @@ struct ManagerStatsView: View {
 
             let squad = viewModel.myPlayers
             let avgAge = squad.isEmpty ? 0.0 : Double(squad.reduce(0) { $0 + $1.age }) / Double(squad.count)
-            let avgOvr = squad.isEmpty ? 0.0 : Double(squad.reduce(0) { $0 + $1.stats.overall }) / Double(squad.count)
+            let avgOvr = squad.isEmpty ? 0.0 : Double(squad.reduce(0) { $0 + $1.overall }) / Double(squad.count)
             let totalWage = squad.reduce(0) { $0 + $1.wage }
             let injured = squad.filter { $0.isInjured }.count
 

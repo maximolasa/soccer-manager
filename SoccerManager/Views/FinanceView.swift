@@ -349,7 +349,7 @@ struct FinanceView: View {
                             .foregroundStyle(.white.opacity(0.4))
                             .frame(width: 30)
 
-                        Text("\(player.stats.overall)")
+                        Text("\(player.overall)")
                             .font(.system(size: 9, weight: .bold, design: .monospaced))
                             .foregroundStyle(.green)
                             .frame(width: 30)

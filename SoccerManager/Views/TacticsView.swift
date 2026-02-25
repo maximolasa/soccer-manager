@@ -19,7 +19,7 @@ struct TacticsView: View {
 
     private var averageOVR: Double {
         guard !startingXI.isEmpty else { return 0 }
-        return Double(startingXI.reduce(0) { $0 + $1.stats.overall }) / Double(startingXI.count)
+        return Double(startingXI.reduce(0) { $0 + $1.overall }) / Double(startingXI.count)
     }
 
     private var benchPlayers: [Player] {
@@ -30,7 +30,7 @@ struct TacticsView: View {
                 let orderA = positionSortOrder(a.position)
                 let orderB = positionSortOrder(b.position)
                 if orderA != orderB { return orderA < orderB }
-                return a.stats.overall > b.stats.overall
+                return a.overall > b.overall
             }
     }
 
@@ -53,11 +53,11 @@ struct TacticsView: View {
         let xiIds = Set(startingXI.map(\.id))
         let bench = viewModel.myPlayers.filter { !xiIds.contains($0.id) && !$0.isInjured }
         guard let slot = selectedSlot else {
-            return bench.sorted { $0.stats.overall > $1.stats.overall }
+            return bench.sorted { $0.overall > $1.overall }
         }
         let slots = formationSlots(formation: formation)
         guard slot < slots.count else {
-            return bench.sorted { $0.stats.overall > $1.stats.overall }
+            return bench.sorted { $0.overall > $1.overall }
         }
         let needed = slots[slot]
         return bench.sorted { a, b in
@@ -67,7 +67,7 @@ struct TacticsView: View {
             let aCompat = compatiblePosition(a.position, for: needed)
             let bCompat = compatiblePosition(b.position, for: needed)
             if aCompat != bCompat { return aCompat }
-            return a.stats.overall > b.stats.overall
+            return a.overall > b.overall
         }
     }
 
@@ -460,7 +460,7 @@ struct TacticsView: View {
                             .frame(width: 36, height: 36)
                     }
 
-                    Text("\(player?.stats.overall ?? 0)")
+                    Text("\(player?.overall ?? 0)")
                         .font(.system(size: 12, weight: .black, design: .rounded))
                         .foregroundStyle(.white)
                 }
@@ -624,7 +624,7 @@ struct TacticsView: View {
                             .font(.system(size: 9, weight: .bold))
                             .foregroundStyle(.white)
                     }
-                    Text("\(posLabel) · \(player.stats.overall)")
+                    Text("\(posLabel) · \(player.overall)")
                         .font(.system(size: 8, weight: .medium))
                         .foregroundStyle(.white.opacity(0.5))
                 }
@@ -671,9 +671,9 @@ struct TacticsView: View {
                 Spacer()
 
                 // Rating
-                Text("\(player.stats.overall)")
+                Text("\(player.overall)")
                     .font(.system(size: 11, weight: .black, design: .rounded))
-                    .foregroundStyle(statColor(player.stats.overall))
+                    .foregroundStyle(statColor(player.overall))
             }
             .padding(.horizontal, 8)
             .padding(.vertical, 5)
@@ -708,16 +708,16 @@ struct TacticsView: View {
         for requiredPos in slots {
             if let best = available
                 .filter({ $0.position == requiredPos })
-                .max(by: { $0.stats.overall < $1.stats.overall }) {
+                .max(by: { $0.overall < $1.overall }) {
                 selected.append(best)
                 available.removeAll { $0.id == best.id }
             } else if let compat = available
                 .filter({ compatiblePosition($0.position, for: requiredPos) })
-                .max(by: { $0.stats.overall < $1.stats.overall }) {
+                .max(by: { $0.overall < $1.overall }) {
                 selected.append(compat)
                 available.removeAll { $0.id == compat.id }
             } else if let fallback = available
-                .max(by: { $0.stats.overall < $1.stats.overall }) {
+                .max(by: { $0.overall < $1.overall }) {
                 selected.append(fallback)
                 available.removeAll { $0.id == fallback.id }
             }

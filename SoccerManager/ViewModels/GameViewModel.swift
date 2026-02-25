@@ -52,7 +52,9 @@ class GameViewModel {
     var seasonYear: Int = 2025
     var managerLeagueTitles: Int = 0
     var managerCupWins: Int = 0
+    var managerName: String = ""
     var mailMessages: [MailMessage] = []
+    var incomingOffers: [TransferOffer] = []
 
     var unreadMailCount: Int {
         mailMessages.filter { !$0.isRead }.count
@@ -169,13 +171,14 @@ class GameViewModel {
         initializeStandings()
         generateFreeAgents()
         currentScreen = .dashboard
-        newsMessages = ["You've been appointed as the new manager! Good luck!"]
+        let displayName = managerName.isEmpty ? "Manager" : managerName
+        newsMessages = ["Welcome, \(displayName)! You've been appointed as the new manager! Good luck!"]
 
         if let club = selectedClub {
             let leagueName = leagues.first { $0.id == club.leagueId }?.name ?? "the league"
             sendMail(
                 subject: "Welcome to \(club.name)!",
-                body: "Congratulations on your appointment as the new manager of \(club.name). The board expects a strong performance in \(leagueName) this season. Your transfer budget is \(formatCurrency(club.budget)). Good luck!",
+                body: "Congratulations \(displayName) on your appointment as the new manager of \(club.name). The board expects a strong performance in \(leagueName) this season. Your transfer budget is \(formatCurrency(club.budget)). Good luck!",
                 category: .board
             )
         }
@@ -469,7 +472,7 @@ class GameViewModel {
             let xi = isHome ? homeXI : awayXI
             let minute = Int.random(in: 25...88)
             if let taker = xi.filter({ $0.position.isForward || $0.position == .attackingMidfield })
-                .max(by: { $0.stats.offensive < $1.stats.offensive }) ?? xi.randomElement() {
+                .max(by: { $0.stats.attackAvg < $1.stats.attackAvg }) ?? xi.randomElement() {
                 if Double.random(in: 0...1) < 0.76 {
                     events.append(MatchEvent(minute: minute, type: .penalty, playerName: taker.fullName, isHome: isHome))
                     if isHome { match.homeScore += 1 } else { match.awayScore += 1 }
@@ -535,14 +538,14 @@ class GameViewModel {
         // ── Player match ratings ──
         var ratings: [UUID: Double] = [:]
         for player in homeXI {
-            let base = Double(player.stats.overall) / 15.0 + 3.0
+            let base = Double(player.overall) / 15.0 + 3.0
             let goalBonus = Double(events.filter { $0.isHome && ($0.type == .goal || $0.type == .penalty) && $0.playerName == player.fullName }.count) * 0.8
             let assistBonus = Double(events.filter { $0.isHome && $0.assistPlayerName == player.fullName }.count) * 0.4
             let resultBonus: Double = match.homeScore > match.awayScore ? 0.3 : (match.homeScore < match.awayScore ? -0.3 : 0)
             ratings[player.id] = min(10.0, max(1.0, base + goalBonus + assistBonus + resultBonus + Double.random(in: -1.0...1.0)))
         }
         for player in awayXI {
-            let base = Double(player.stats.overall) / 15.0 + 3.0
+            let base = Double(player.overall) / 15.0 + 3.0
             let goalBonus = Double(events.filter { !$0.isHome && ($0.type == .goal || $0.type == .penalty) && $0.playerName == player.fullName }.count) * 0.8
             let assistBonus = Double(events.filter { !$0.isHome && $0.assistPlayerName == player.fullName }.count) * 0.4
             let resultBonus: Double = match.awayScore > match.homeScore ? 0.3 : (match.awayScore < match.homeScore ? -0.3 : 0)
@@ -629,6 +632,7 @@ class GameViewModel {
             currentWeek += 1
             handleInjuries()
             paySalaries()
+            generateIncomingOffers()
         }
 
         // Training every ~28 days
@@ -708,13 +712,22 @@ class GameViewModel {
             let chance = Double.random(in: 0...1)
             if chance < 0.3 * club.trainingBoost && player.age < 30 {
                 let boost = Int.random(in: 1...2)
-                player.stats.overall = min(player.potentialPeak, player.stats.overall + boost)
-                let statToBoost = Int.random(in: 0...2)
-                switch statToBoost {
-                case 0: player.stats.offensive = min(99, player.stats.offensive + boost)
-                case 1: player.stats.defensive = min(99, player.stats.defensive + boost)
-                default: player.stats.physical = min(99, player.stats.physical + boost)
+                // Boost random individual stats — position-aware
+                let allStats: [(WritableKeyPath<PlayerStats, Int>)]
+                if player.position == .goalkeeper {
+                    allStats = [
+                        \.reflexes, \.diving, \.handling, \.gkPositioning, \.kicking, \.oneOnOne,
+                        \.pace, \.stamina, \.strength, \.movement
+                    ]
+                } else {
+                    allStats = [
+                        \.finishing, \.longShots, \.dribbling, \.firstTouch, \.crossing, \.passing,
+                        \.tackling, \.marking, \.heading, \.defensivePositioning,
+                        \.pace, \.stamina, \.strength, \.movement
+                    ]
                 }
+                let pick = allStats.randomElement()!
+                player.stats[keyPath: pick] = min(99, player.stats[keyPath: pick] + boost)
             }
         }
     }
@@ -731,7 +744,7 @@ class GameViewModel {
             players.append(player)
             sendMail(
                 subject: "New youth talent: \(player.fullName)",
-                body: "The youth academy has produced \(player.fullName), a \(player.position.fullName) rated \(player.stats.overall) OVR. He has been added to your squad.",
+                body: "The youth academy has produced \(player.fullName), a \(player.position.fullName) rated \(player.overall) OVR. He has been added to your squad.",
                 category: .youth
             )
         }
@@ -769,7 +782,6 @@ class GameViewModel {
     func buyPlayer(_ player: Player, fee: Int) -> Bool {
         guard let club = selectedClub else { return false }
         guard club.budget >= fee else { return false }
-        // Check salary budget can cover the player's wage
         guard club.wageBudget >= player.wage else { return false }
         club.budget -= fee
         if let oldClubId = player.clubId, let oldClub = clubs.first(where: { $0.id == oldClubId }) {
@@ -777,12 +789,56 @@ class GameViewModel {
         }
         player.clubId = selectedClubId
         player.contractYearsLeft = Int.random(in: 2...5)
+        player.isTransferListed = false
         sendMail(
             subject: "Transfer complete: \(player.fullName)",
-            body: "You have signed \(player.fullName) (\(player.position.rawValue), \(player.stats.overall) OVR) for \(formatCurrency(fee)). Wage: \(formatCurrency(player.wage))/week. Contract: \(player.contractYearsLeft) years.",
+            body: "You have signed \(player.fullName) (\(player.position.rawValue), \(player.overall) OVR) for \(formatCurrency(fee)). Wage: \(formatCurrency(player.wage))/week. Contract: \(player.contractYearsLeft) years.",
             category: .transfer
         )
         return true
+    }
+
+    /// Buy with negotiated fee, wage and contract length
+    func buyPlayerNegotiated(_ player: Player, fee: Int, wage: Int, years: Int) -> Bool {
+        guard let club = selectedClub else { return false }
+        guard club.budget >= fee else { return false }
+        guard club.wageBudget >= wage else { return false }
+        club.budget -= fee
+        if let oldClubId = player.clubId, let oldClub = clubs.first(where: { $0.id == oldClubId }) {
+            oldClub.budget += fee
+        }
+        player.clubId = selectedClubId
+        player.wage = wage
+        player.contractYearsLeft = years
+        player.isTransferListed = false
+        player.morale = min(100, player.morale + 10)
+        newsMessages.insert("Signed \(player.fullName) for \(formatCurrency(fee))!", at: 0)
+        sendMail(
+            subject: "Transfer complete: \(player.fullName)",
+            body: "Signed \(player.fullName) (\(player.position.rawValue), \(player.overall) OVR) for \(formatCurrency(fee)). Wage: \(formatCurrency(wage))/wk, \(years)-year contract.",
+            category: .transfer
+        )
+        return true
+    }
+
+    /// Sell a player from my squad for a given fee
+    func sellMyPlayer(_ player: Player, fee: Int) {
+        guard let club = selectedClub else { return }
+        club.budget += fee
+        let buyerClubs = clubs.filter { $0.id != selectedClubId }
+        if let buyer = buyerClubs.randomElement() {
+            player.clubId = buyer.id
+            buyer.budget -= min(fee, buyer.budget)
+        } else {
+            player.clubId = nil
+        }
+        player.isTransferListed = false
+        newsMessages.insert("Sold \(player.fullName) for \(formatCurrency(fee))!", at: 0)
+        sendMail(
+            subject: "\(player.fullName) sold",
+            body: "Sold \(player.fullName) for \(formatCurrency(fee)). Funds added to your transfer budget.",
+            category: .transfer
+        )
     }
 
     func sellPlayer(_ player: Player, fee: Int) {
@@ -824,10 +880,182 @@ class GameViewModel {
         newsMessages.insert("Signed free agent \(player.fullName)!", at: 0)
         sendMail(
             subject: "Free agent signed: \(player.fullName)",
-            body: "You have signed free agent \(player.fullName) (\(player.position.rawValue), \(player.stats.overall) OVR) on a \(player.contractYearsLeft)-year contract at \(formatCurrency(wage))/week.",
+            body: "You have signed free agent \(player.fullName) (\(player.position.rawValue), \(player.overall) OVR) on a \(player.contractYearsLeft)-year contract at \(formatCurrency(wage))/week.",
             category: .transfer
         )
         return true
+    }
+
+    // MARK: - Incoming Transfer Offers
+
+    /// AI clubs bid on the user's players. Called weekly during open transfer window.
+    func generateIncomingOffers() {
+        guard transferWindow == .open else { return }
+        guard let myClubId = selectedClubId else { return }
+
+        let mySquad = players.filter { $0.clubId == myClubId }
+        guard !mySquad.isEmpty else { return }
+
+        let rivalClubs = clubs.filter { $0.id != myClubId }
+        guard !rivalClubs.isEmpty else { return }
+
+        // 0-2 offers per week
+        let offerCount = Int.random(in: 0...2)
+        guard offerCount > 0 else { return }
+
+        // Weight players: transfer-listed players 4x more likely, high-rated 2x
+        var candidates: [(Player, Double)] = mySquad.map { p in
+            var weight = 1.0
+            if p.isTransferListed { weight *= 4.0 }
+            if p.overall >= 75 { weight *= 2.0 }
+            if p.contractYearsLeft <= 1 { weight *= 1.5 }
+            return (p, weight)
+        }
+
+        for _ in 0..<offerCount {
+            guard !candidates.isEmpty else { break }
+
+            // Weighted random pick
+            let totalWeight = candidates.reduce(0.0) { $0 + $1.1 }
+            var roll = Double.random(in: 0..<totalWeight)
+            var pickedIdx = 0
+            for (idx, (_, w)) in candidates.enumerated() {
+                roll -= w
+                if roll <= 0 { pickedIdx = idx; break }
+            }
+
+            let player = candidates[pickedIdx].0
+            candidates.remove(at: pickedIdx)
+
+            guard let bidder = rivalClubs.randomElement() else { continue }
+
+            // Fee: 70-140% of market value (transfer-listed → lower offers)
+            let basePct = player.isTransferListed
+                ? Double.random(in: 0.60...1.10)
+                : Double.random(in: 0.75...1.40)
+            let fee = max(50_000, Int(Double(player.marketValue) * basePct))
+
+            let offer = TransferOffer(
+                date: currentDate,
+                biddingClubId: bidder.id,
+                biddingClubName: bidder.name,
+                playerId: player.id,
+                playerName: player.fullName,
+                fee: fee
+            )
+            incomingOffers.append(offer)
+
+            let mail = MailMessage(
+                date: currentDate,
+                subject: "Transfer bid: \(player.fullName)",
+                body: "\(bidder.name) have submitted a bid of \(formatCurrency(fee)) for \(player.fullName) (\(player.position.rawValue), \(player.overall) OVR).\n\nThe player's current market value is \(formatCurrency(player.marketValue)).\(player.isTransferListed ? "\n\nNote: This player is on your transfer list." : "")\n\nYou can accept or reject this offer.",
+                category: .transfer,
+                offerId: offer.id
+            )
+            mailMessages.insert(mail, at: 0)
+        }
+    }
+
+    func acceptOffer(_ offer: TransferOffer) {
+        guard offer.status == .pending || offer.status == .countered else { return }
+        guard let player = players.first(where: { $0.id == offer.playerId }) else { return }
+        guard let club = selectedClub else { return }
+        guard let buyerClub = clubs.first(where: { $0.id == offer.biddingClubId }) else { return }
+
+        offer.status = .accepted
+        club.budget += offer.fee
+        buyerClub.budget -= min(offer.fee, buyerClub.budget)
+        player.clubId = offer.biddingClubId
+        player.isTransferListed = false
+        player.contractYearsLeft = Int.random(in: 2...4)
+
+        newsMessages.insert("Sold \(player.fullName) to \(offer.biddingClubName) for \(formatCurrency(offer.fee))!", at: 0)
+        sendMail(
+            subject: "Transfer completed: \(player.fullName)",
+            body: "You have accepted \(offer.biddingClubName)'s bid of \(formatCurrency(offer.fee)) for \(player.fullName). The funds have been added to your transfer budget.",
+            category: .transfer
+        )
+    }
+
+    func rejectOffer(_ offer: TransferOffer) {
+        guard offer.status == .pending || offer.status == .countered else { return }
+        offer.status = .rejected
+        sendMail(
+            subject: "Offer rejected: \(offer.playerName)",
+            body: "You have rejected \(offer.biddingClubName)'s bid of \(formatCurrency(offer.fee)) for \(offer.playerName).",
+            category: .transfer
+        )
+    }
+
+    /// User proposes a counter-fee. The AI club responds.
+    func counterOffer(_ offer: TransferOffer, counterFee: Int) {
+        guard offer.status == .pending || offer.status == .countered else { return }
+        guard let player = players.first(where: { $0.id == offer.playerId }) else { return }
+
+        offer.negotiationRound += 1
+        let marketValue = player.marketValue
+
+        // How reasonable is the counter? ratio > 1 means user asks above market value
+        let ratio = Double(counterFee) / Double(max(1, marketValue))
+
+        // After 3 rounds, club walks away
+        if offer.negotiationRound >= 3 {
+            offer.status = .rejected
+            sendMail(
+                subject: "Negotiations collapsed: \(offer.playerName)",
+                body: "\(offer.biddingClubName) have ended negotiations for \(offer.playerName). They felt the asking price of \(formatCurrency(counterFee)) was too high.",
+                category: .transfer
+            )
+            return
+        }
+
+        // Chance the club accepts outright
+        // If counter <= 110% market value, high chance; scales down from there
+        let acceptChance: Double
+        if ratio <= 1.0 {
+            acceptChance = 0.95
+        } else if ratio <= 1.15 {
+            acceptChance = 0.70
+        } else if ratio <= 1.30 {
+            acceptChance = 0.40
+        } else if ratio <= 1.50 {
+            acceptChance = 0.15
+        } else {
+            acceptChance = 0.05
+        }
+
+        // Transfer-listed → club less willing to pay premium (they know you want to sell)
+        let adjustedChance = player.isTransferListed ? acceptChance * 0.7 : acceptChance
+
+        let roll = Double.random(in: 0...1)
+        if roll < adjustedChance {
+            // Club accepts the counter
+            offer.fee = counterFee
+            offer.status = .pending  // set back to pending so user can accept
+            let mail = MailMessage(
+                date: currentDate,
+                subject: "Counter accepted: \(offer.playerName)",
+                body: "\(offer.biddingClubName) have accepted your asking price of \(formatCurrency(counterFee)) for \(offer.playerName).\n\nYou can now accept or reject the deal.",
+                category: .transfer,
+                offerId: offer.id
+            )
+            mailMessages.insert(mail, at: 0)
+        } else {
+            // Club makes a revised bid — meet halfway between their offer and user's counter
+            let meetPoint = Double.random(in: 0.4...0.65)
+            let revisedFee = Int(Double(offer.fee) + (Double(counterFee - offer.fee) * meetPoint))
+            offer.fee = revisedFee
+            offer.status = .countered
+
+            let mail = MailMessage(
+                date: currentDate,
+                subject: "Revised bid: \(offer.playerName)",
+                body: "\(offer.biddingClubName) have revised their offer for \(offer.playerName) to \(formatCurrency(revisedFee)).\n\nMarket value: \(formatCurrency(marketValue)). Negotiation round \(offer.negotiationRound)/3.\n\nYou can accept, reject, or counter again.",
+                category: .transfer,
+                offerId: offer.id
+            )
+            mailMessages.insert(mail, at: 0)
+        }
     }
 
     func formatCurrency(_ amount: Int) -> String {
@@ -936,11 +1164,11 @@ class GameViewModel {
     private func pickBestXI(from pool: [Player]) -> [Player] {
         var available = pool
         var xi: [Player] = []
-        if let gk = available.filter({ $0.position == .goalkeeper }).max(by: { $0.stats.overall < $1.stats.overall }) {
+        if let gk = available.filter({ $0.position == .goalkeeper }).max(by: { $0.overall < $1.overall }) {
             xi.append(gk)
             available.removeAll { $0.id == gk.id }
         }
-        let outfield = available.sorted { $0.stats.overall > $1.stats.overall }.prefix(max(0, 11 - xi.count))
+        let outfield = available.sorted { $0.overall > $1.overall }.prefix(max(0, 11 - xi.count))
         xi.append(contentsOf: outfield)
         return xi
     }
@@ -961,7 +1189,7 @@ class GameViewModel {
             case .centerBack:                    w = 0.2
             case .goalkeeper:                    w = 0.05
             }
-            total += Double(p.stats.offensive) * w
+            total += Double(p.stats.attackAvg) * w
             wSum += w
         }
         return total / max(wSum, 1.0)
@@ -983,7 +1211,7 @@ class GameViewModel {
             case .leftWing, .rightWing:          w = 0.3
             case .striker:                       w = 0.1
             }
-            total += Double(p.stats.defensive) * w
+            total += Double(p.stats.defenseAvg) * w
             wSum += w
         }
         return total / max(wSum, 1.0)
@@ -1003,7 +1231,7 @@ class GameViewModel {
             case .striker:                       w = 0.4
             case .goalkeeper:                    w = 0.1
             }
-            total += Double(p.stats.overall) * w
+            total += Double(p.overall) * w
             wSum += w
         }
         return total / max(wSum, 1.0)
@@ -1031,7 +1259,7 @@ class GameViewModel {
             case .centerBack, .leftBack, .rightBack: posW = 0.2
             case .goalkeeper:                    posW = 0.01
             }
-            return (p, posW * Double(max(1, p.stats.offensive)) / 50.0)
+            return (p, posW * Double(max(1, p.stats.attackAvg)) / 50.0)
         }
         return weightedPick(weights) ?? xi.first!
     }
@@ -1053,7 +1281,7 @@ class GameViewModel {
             case .centerBack:                    posW = 0.5
             case .goalkeeper:                    posW = 0.05
             }
-            return (p, posW * Double(max(1, p.stats.overall)) / 50.0)
+            return (p, posW * Double(max(1, p.overall)) / 50.0)
         }
         return weightedPick(weights)
     }
@@ -1134,7 +1362,7 @@ class GameViewModel {
         players.append(contentsOf: squad)
 
         // Recalculate club rating = average overall of top 15 players
-        let topRatings = squad.map { $0.stats.overall }.sorted(by: >).prefix(15)
+        let topRatings = squad.map { $0.overall }.sorted(by: >).prefix(15)
         if !topRatings.isEmpty {
             club.rating = topRatings.reduce(0, +) / topRatings.count
         }

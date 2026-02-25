@@ -4,7 +4,7 @@ struct YouthAcademyView: View {
     @State var viewModel: GameViewModel
 
     var youthPlayers: [Player] {
-        viewModel.myPlayers.filter { $0.age <= 21 }.sorted { $0.stats.overall > $1.stats.overall }
+        viewModel.myPlayers.filter { $0.age <= 21 }.sorted { $0.overall > $1.overall }
     }
 
     var body: some View {
@@ -134,7 +134,7 @@ struct YouthAcademyView: View {
                         Spacer()
 
                         HStack(spacing: 8) {
-                            miniStatBadge("OVR", player.stats.overall, .green)
+                            miniStatBadge("OVR", player.overall, .green)
                             miniStatBadge("POT", player.potentialPeak, .cyan)
                         }
                     }

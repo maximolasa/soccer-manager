@@ -93,47 +93,91 @@ struct GameDataGenerator {
         let lastName = lastNames.randomElement()!
         let age = Int.random(in: 17...35)
         let v = Int.random(in: -variance...variance)
-        let overall = max(25, min(99, quality + v))
+        let base = max(25, min(99, quality + v))
 
-        let offensive: Int
-        let defensive: Int
-        let physical: Int
-
-        switch position {
-        case .goalkeeper:
-            offensive = max(10, overall - Int.random(in: 20...35))
-            defensive = min(99, overall + Int.random(in: 5...15))
-            physical = max(30, overall - Int.random(in: 0...10))
-        case .centerBack, .leftBack, .rightBack:
-            offensive = max(15, overall - Int.random(in: 10...25))
-            defensive = min(99, overall + Int.random(in: 5...15))
-            physical = min(99, overall + Int.random(in: 0...10))
-        case .defensiveMidfield:
-            offensive = max(20, overall - Int.random(in: 5...15))
-            defensive = min(99, overall + Int.random(in: 3...10))
-            physical = min(99, overall + Int.random(in: 0...8))
-        case .centralMidfield, .attackingMidfield:
-            offensive = min(99, overall + Int.random(in: 0...10))
-            defensive = max(25, overall - Int.random(in: 5...15))
-            physical = max(30, overall - Int.random(in: 0...8))
-        case .leftWing, .rightWing:
-            offensive = min(99, overall + Int.random(in: 5...15))
-            defensive = max(15, overall - Int.random(in: 15...30))
-            physical = min(99, overall + Int.random(in: 0...10))
-        case .striker:
-            offensive = min(99, overall + Int.random(in: 8...18))
-            defensive = max(10, overall - Int.random(in: 20...35))
-            physical = min(99, overall + Int.random(in: 0...8))
+        /// Helper: clamp a stat offset around the base quality
+        func s(_ lo: Int, _ hi: Int) -> Int {
+            max(1, min(99, base + Int.random(in: lo...hi)))
         }
 
-        let stats = PlayerStats(
-            overall: overall,
-            offensive: offensive,
-            defensive: defensive,
-            physical: physical
-        )
+        let stats: PlayerStats
+        switch position {
+        case .goalkeeper:
+            stats = PlayerStats(
+                finishing: s(-35, -20), longShots: s(-30, -15), dribbling: s(-25, -10),
+                firstTouch: s(-15, -5), crossing: s(-30, -15), passing: s(-10, 0),
+                tackling: s(-10, 5), marking: s(0, 10), heading: s(-5, 5),
+                defensivePositioning: s(5, 15),
+                pace: s(-10, 5), stamina: s(-5, 5), strength: s(-5, 10), movement: s(-10, 0),
+                reflexes: s(3, 15), diving: s(3, 15), handling: s(3, 12),
+                gkPositioning: s(3, 15), kicking: s(-5, 10), oneOnOne: s(0, 12)
+            )
+        case .centerBack:
+            stats = PlayerStats(
+                finishing: s(-25, -10), longShots: s(-20, -8), dribbling: s(-15, -5),
+                firstTouch: s(-10, 0), crossing: s(-15, -5), passing: s(-10, 5),
+                tackling: s(5, 15), marking: s(5, 15), heading: s(5, 15),
+                defensivePositioning: s(5, 15),
+                pace: s(-5, 5), stamina: s(0, 8), strength: s(5, 15), movement: s(-5, 5),
+                reflexes: 1, diving: 1, handling: 1, gkPositioning: 1, kicking: 1, oneOnOne: 1
+            )
+        case .leftBack, .rightBack:
+            stats = PlayerStats(
+                finishing: s(-20, -8), longShots: s(-15, -5), dribbling: s(-5, 8),
+                firstTouch: s(-5, 5), crossing: s(0, 12), passing: s(-5, 8),
+                tackling: s(0, 10), marking: s(0, 10), heading: s(-5, 5),
+                defensivePositioning: s(0, 10),
+                pace: s(5, 15), stamina: s(5, 12), strength: s(-5, 5), movement: s(0, 10),
+                reflexes: 1, diving: 1, handling: 1, gkPositioning: 1, kicking: 1, oneOnOne: 1
+            )
+        case .defensiveMidfield:
+            stats = PlayerStats(
+                finishing: s(-15, -3), longShots: s(-10, 3), dribbling: s(-5, 5),
+                firstTouch: s(-3, 5), crossing: s(-8, 3), passing: s(0, 10),
+                tackling: s(5, 15), marking: s(3, 12), heading: s(0, 8),
+                defensivePositioning: s(3, 12),
+                pace: s(-3, 5), stamina: s(5, 12), strength: s(3, 10), movement: s(0, 8),
+                reflexes: 1, diving: 1, handling: 1, gkPositioning: 1, kicking: 1, oneOnOne: 1
+            )
+        case .centralMidfield:
+            stats = PlayerStats(
+                finishing: s(-8, 5), longShots: s(-5, 8), dribbling: s(0, 8),
+                firstTouch: s(0, 8), crossing: s(-3, 8), passing: s(5, 15),
+                tackling: s(-3, 8), marking: s(-5, 5), heading: s(-5, 5),
+                defensivePositioning: s(-5, 5),
+                pace: s(-3, 5), stamina: s(5, 12), strength: s(-3, 5), movement: s(0, 8),
+                reflexes: 1, diving: 1, handling: 1, gkPositioning: 1, kicking: 1, oneOnOne: 1
+            )
+        case .attackingMidfield:
+            stats = PlayerStats(
+                finishing: s(0, 10), longShots: s(0, 12), dribbling: s(5, 15),
+                firstTouch: s(5, 12), crossing: s(0, 10), passing: s(5, 15),
+                tackling: s(-20, -8), marking: s(-20, -8), heading: s(-10, 0),
+                defensivePositioning: s(-15, -5),
+                pace: s(0, 8), stamina: s(-3, 5), strength: s(-8, 3), movement: s(3, 10),
+                reflexes: 1, diving: 1, handling: 1, gkPositioning: 1, kicking: 1, oneOnOne: 1
+            )
+        case .leftWing, .rightWing:
+            stats = PlayerStats(
+                finishing: s(0, 10), longShots: s(-3, 8), dribbling: s(5, 18),
+                firstTouch: s(3, 12), crossing: s(5, 15), passing: s(-3, 8),
+                tackling: s(-25, -10), marking: s(-25, -10), heading: s(-15, -3),
+                defensivePositioning: s(-20, -8),
+                pace: s(5, 18), stamina: s(0, 8), strength: s(-8, 3), movement: s(5, 15),
+                reflexes: 1, diving: 1, handling: 1, gkPositioning: 1, kicking: 1, oneOnOne: 1
+            )
+        case .striker:
+            stats = PlayerStats(
+                finishing: s(8, 18), longShots: s(0, 10), dribbling: s(0, 12),
+                firstTouch: s(3, 12), crossing: s(-10, 3), passing: s(-8, 3),
+                tackling: s(-30, -15), marking: s(-30, -15), heading: s(0, 10),
+                defensivePositioning: s(-25, -12),
+                pace: s(0, 12), stamina: s(-3, 5), strength: s(0, 10), movement: s(5, 15),
+                reflexes: 1, diving: 1, handling: 1, gkPositioning: 1, kicking: 1, oneOnOne: 1
+            )
+        }
 
-        let wage = fifaWage(overall: overall, age: age)
+        let wage = fifaWage(overall: stats.overall(for: position), age: age)
         let player = Player(
             firstName: firstName,
             lastName: lastName,
