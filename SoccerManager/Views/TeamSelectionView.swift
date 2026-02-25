@@ -46,8 +46,6 @@ struct TeamSelectionView: View {
             Color.black.ignoresSafeArea()
 
             VStack(spacing: 0) {
-                header
-
                 HStack(spacing: 0) {
                     leagueSidebar
                     clubGrid
@@ -64,29 +62,6 @@ struct TeamSelectionView: View {
             }
         }
         .animation(.spring(duration: 0.35), value: previewClub?.id)
-    }
-
-    // MARK: - Header
-
-    private var header: some View {
-        VStack(spacing: 4) {
-            Text("FOOTBALL MANAGER")
-                .font(.system(size: 28, weight: .black, design: .default))
-                .tracking(4)
-                .foregroundStyle(.white)
-
-            Text("Select your club")
-                .font(.subheadline)
-                .foregroundStyle(.white.opacity(0.6))
-        }
-        .padding(.vertical, 12)
-        .frame(maxWidth: .infinity)
-        .background(
-            LinearGradient(
-                colors: [Color(red: 0.1, green: 0.15, blue: 0.2), Color(red: 0.05, green: 0.08, blue: 0.12)],
-                startPoint: .top, endPoint: .bottom
-            )
-        )
     }
 
     // MARK: - League Sidebar
