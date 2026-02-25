@@ -243,7 +243,8 @@ struct TeamSelectionView: View {
     private func clubPreviewPanel(_ club: Club) -> some View {
         let leagueName = viewModel.leagues.first { $0.id == club.leagueId }?.name ?? ""
 
-        return VStack(spacing: 0) {
+        return ScrollView {
+            VStack(spacing: 0) {
             // Close button
             HStack {
                 Spacer()
@@ -303,14 +304,9 @@ struct TeamSelectionView: View {
                 previewStatRow("Salary Budget", formatCurrencyLocal(club.wageBudget / 52) + "/wk", .orange, "creditcard")
                 previewStatRow("Stadium", club.stadiumName, .green, "building.2")
                 previewStatRow("Capacity", "\(club.stadiumCapacity / 1000)K", .green, "person.3.fill")
-                previewStatRow("Formation", club.formation, .purple, "rectangle.split.3x3")
-                previewStatRow("League Titles", "\(club.leagueTitles)", .yellow, "trophy.fill")
-                previewStatRow("Cup Wins", "\(club.cupWins)", .yellow, "trophy")
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 10)
-
-            Spacer(minLength: 4)
 
             // Sign contract button
             Button {
@@ -330,6 +326,7 @@ struct TeamSelectionView: View {
             }
             .buttonStyle(.plain)
             .padding(16)
+            }
         }
         .frame(width: 260)
         .background(Color(white: 0.07))
