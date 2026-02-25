@@ -53,11 +53,13 @@ struct TeamSelectionView: View {
                 HStack(spacing: 0) {
                     leagueSidebar
                     clubGrid
-                    if let club = previewClub {
-                        clubPreviewPanel(club)
-                            .transition(.move(edge: .trailing).combined(with: .opacity))
-                    }
                 }
+            }
+
+            // Club preview overlay
+            if let club = previewClub {
+                clubPreviewOverlay(club)
+                    .transition(.opacity)
             }
 
             // Contract signing overlay
@@ -202,27 +204,19 @@ struct TeamSelectionView: View {
                     .padding(.horizontal, 16)
                     .padding(.vertical, 8)
 
-                    if let selected = previewClub {
-                        // Show only the selected club centered
-                        Spacer()
-                        ClubCard(club: selected, isSelected: true) { }
-                            .frame(width: 150)
-                        Spacer()
-                    } else {
-                        ScrollView {
-                            LazyVGrid(columns: [
-                                GridItem(.adaptive(minimum: 140), spacing: 10)
-                            ], spacing: 10) {
-                                ForEach(filteredClubs) { club in
-                                    ClubCard(club: club, isSelected: false) {
-                                        withAnimation(.spring(duration: 0.3)) {
-                                            previewClub = club
-                                        }
+                    ScrollView {
+                        LazyVGrid(columns: [
+                            GridItem(.adaptive(minimum: 140), spacing: 10)
+                        ], spacing: 10) {
+                            ForEach(filteredClubs) { club in
+                                ClubCard(club: club, isSelected: previewClub?.id == club.id) {
+                                    withAnimation(.spring(duration: 0.3)) {
+                                        previewClub = club
                                     }
                                 }
                             }
-                            .padding(12)
                         }
+                        .padding(12)
                     }
                 }
             } else {
@@ -240,128 +234,177 @@ struct TeamSelectionView: View {
         .background(Color(white: 0.05))
     }
 
-    // MARK: - Club Preview Panel
+    // MARK: - Club Preview Overlay
 
-    private func clubPreviewPanel(_ club: Club) -> some View {
+    private func clubPreviewOverlay(_ club: Club) -> some View {
         let leagueName = viewModel.leagues.first { $0.id == club.leagueId }?.name ?? ""
 
-        return VStack(spacing: 0) {
-            // Close button
-            HStack {
-                Spacer()
-                Button {
+        return ZStack {
+            // Dimmed tappable background to dismiss
+            Color.black.opacity(0.6)
+                .ignoresSafeArea()
+                .onTapGesture {
                     withAnimation(.spring(duration: 0.3, bounce: 0.15)) {
                         previewClub = nil
                     }
-                } label: {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 10, weight: .bold))
-                        .foregroundStyle(.white.opacity(0.5))
-                        .padding(6)
-                        .background(Color.white.opacity(0.1))
-                        .clipShape(Circle())
                 }
-                .buttonStyle(.plain)
-            }
-            .padding(.trailing, 10)
-            .padding(.top, 8)
 
-            // Club header
-            VStack(spacing: 10) {
-                ZStack {
-                    Circle()
-                        .fill(
-                            RadialGradient(
-                                colors: [club.primarySwiftUIColor.opacity(0.6), club.primarySwiftUIColor.opacity(0.1)],
-                                center: .center, startRadius: 0, endRadius: 40
+            // Card
+            VStack(spacing: 0) {
+                // ── Top: club color accent bar ──
+                Rectangle()
+                    .fill(
+                        LinearGradient(
+                            colors: [club.primarySwiftUIColor, club.secondarySwiftUIColor.opacity(0.6)],
+                            startPoint: .leading, endPoint: .trailing
+                        )
+                    )
+                    .frame(height: 4)
+
+                // ── Header: badge + name ──
+                VStack(spacing: 8) {
+                    ZStack {
+                        Circle()
+                            .fill(
+                                RadialGradient(
+                                    colors: [club.primarySwiftUIColor.opacity(0.5), club.primarySwiftUIColor.opacity(0.08)],
+                                    center: .center, startRadius: 0, endRadius: 40
+                                )
+                            )
+                            .frame(width: 70, height: 70)
+
+                        Circle()
+                            .stroke(
+                                LinearGradient(
+                                    colors: [club.primarySwiftUIColor.opacity(0.9), club.secondarySwiftUIColor.opacity(0.5)],
+                                    startPoint: .topLeading, endPoint: .bottomTrailing
+                                ),
+                                lineWidth: 2.5
+                            )
+                            .frame(width: 70, height: 70)
+
+                        Text(club.shortName)
+                            .font(.system(size: 20, weight: .black))
+                            .foregroundStyle(.white)
+                    }
+
+                    Text(club.name)
+                        .font(.system(size: 18, weight: .bold))
+                        .foregroundStyle(.white)
+
+                    Text(leagueName)
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(.white.opacity(0.45))
+                }
+                .padding(.top, 18)
+                .padding(.bottom, 14)
+
+                // ── Stats grid ──
+                VStack(spacing: 1) {
+                    // Row 1: Rating & Formation
+                    HStack(spacing: 1) {
+                        statCell(icon: "star.fill", label: "Rating", value: "\(club.rating)", color: .yellow)
+                        statCell(icon: "rectangle.split.3x3", label: "Formation", value: club.formation, color: .purple)
+                    }
+
+                    // Row 2: Budget & Wages
+                    HStack(spacing: 1) {
+                        statCell(icon: "banknote", label: "Transfer Budget", value: formatCurrencyLocal(club.budget), color: .cyan)
+                        statCell(icon: "creditcard", label: "Wages /wk", value: formatCurrencyLocal(club.wageBudget / 52), color: .orange)
+                    }
+
+                    // Row 3: Stadium & Capacity
+                    HStack(spacing: 1) {
+                        statCell(icon: "building.2", label: "Stadium", value: club.stadiumName, color: .green)
+                        statCell(icon: "person.3.fill", label: "Capacity", value: "\(club.stadiumCapacity / 1000)K", color: .green)
+                    }
+
+                    // Row 4: Trophies
+                    HStack(spacing: 1) {
+                        statCell(icon: "trophy.fill", label: "League Titles", value: "\(club.leagueTitles)", color: .yellow)
+                        statCell(icon: "trophy", label: "Cup Wins", value: "\(club.cupWins)", color: .yellow)
+                    }
+                }
+                .clipShape(.rect(cornerRadius: 8))
+                .padding(.horizontal, 16)
+
+                // ── Buttons ──
+                VStack(spacing: 8) {
+                    Button {
+                        signContract(club)
+                    } label: {
+                        HStack(spacing: 8) {
+                            Image(systemName: "pencil.line")
+                                .font(.system(size: 13, weight: .bold))
+                            Text("Sign Contract")
+                                .font(.system(size: 14, weight: .bold))
+                        }
+                        .foregroundStyle(.black)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 13)
+                        .background(
+                            LinearGradient(
+                                colors: [Color.green, Color.green.opacity(0.8)],
+                                startPoint: .leading, endPoint: .trailing
                             )
                         )
-                        .frame(width: 64, height: 64)
-                    Circle()
-                        .stroke(club.primarySwiftUIColor.opacity(0.8), lineWidth: 2)
-                        .frame(width: 64, height: 64)
-                    Text(club.shortName)
-                        .font(.system(size: 18, weight: .black))
-                        .foregroundStyle(.white)
+                        .clipShape(.rect(cornerRadius: 12))
+                    }
+                    .buttonStyle(.plain)
+
+                    Button {
+                        withAnimation(.spring(duration: 0.3, bounce: 0.15)) {
+                            previewClub = nil
+                        }
+                    } label: {
+                        Text("Back")
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundStyle(.white.opacity(0.5))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 10)
+                            .background(Color.white.opacity(0.06))
+                            .clipShape(.rect(cornerRadius: 10))
+                    }
+                    .buttonStyle(.plain)
                 }
-
-                Text(club.name)
-                    .font(.system(size: 16, weight: .bold))
-                    .foregroundStyle(.white)
-
-                Text(leagueName)
-                    .font(.system(size: 11))
-                    .foregroundStyle(.white.opacity(0.5))
+                .padding(.horizontal, 16)
+                .padding(.top, 16)
+                .padding(.bottom, 18)
             }
-            .padding(.top, 4)
-            .padding(.bottom, 14)
-
-            Divider().overlay(Color.white.opacity(0.1))
-
-            // Stats
-            VStack(spacing: 8) {
-                previewStatRow("Rating", "\(club.rating)", .yellow, "star.fill")
-                previewStatRow("Transfer Budget", formatCurrencyLocal(club.budget), .cyan, "banknote")
-                previewStatRow("Salary Budget", formatCurrencyLocal(club.wageBudget / 52) + "/wk", .orange, "creditcard")
-                previewStatRow("Stadium", club.stadiumName, .green, "building.2")
-                previewStatRow("Capacity", "\(club.stadiumCapacity / 1000)K", .green, "person.3.fill")
-                previewStatRow("Formation", club.formation, .purple, "rectangle.split.3x3")
-                previewStatRow("League Titles", "\(club.leagueTitles)", .yellow, "trophy.fill")
-                previewStatRow("Cup Wins", "\(club.cupWins)", .yellow, "trophy")
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 10)
-
-            Spacer(minLength: 4)
-
-            // Sign contract button
-            Button {
-                signContract(club)
-            } label: {
-                HStack(spacing: 8) {
-                    Image(systemName: "pencil.line")
-                        .font(.system(size: 14, weight: .bold))
-                    Text("Sign Contract")
-                        .font(.system(size: 14, weight: .bold))
-                }
-                .foregroundStyle(.black)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 12)
-                .background(Color.green)
-                .clipShape(.rect(cornerRadius: 12))
-            }
-            .buttonStyle(.plain)
-            .padding(16)
+            .background(Color(red: 0.07, green: 0.09, blue: 0.12))
+            .clipShape(.rect(cornerRadius: 16))
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(club.primarySwiftUIColor.opacity(0.2), lineWidth: 1)
+            )
+            .shadow(color: club.primarySwiftUIColor.opacity(0.15), radius: 30)
+            .shadow(color: .black.opacity(0.6), radius: 20, y: 10)
+            .frame(maxWidth: 340)
+            .padding(.horizontal, 24)
+            .transition(.scale(scale: 0.85).combined(with: .opacity))
         }
-        .frame(width: 260)
-        .background(Color(white: 0.07))
-        .overlay(
-            Rectangle()
-                .fill(Color.white.opacity(0.06))
-                .frame(width: 1),
-            alignment: .leading
-        )
-        .shadow(color: .black.opacity(0.5), radius: 16, x: -6)
     }
 
-    private func previewStatRow(_ label: String, _ value: String, _ color: Color, _ icon: String) -> some View {
-        HStack(spacing: 10) {
+    private func statCell(icon: String, label: String, value: String, color: Color) -> some View {
+        VStack(spacing: 6) {
             Image(systemName: icon)
-                .font(.system(size: 11))
+                .font(.system(size: 14))
                 .foregroundStyle(color)
-                .frame(width: 18)
-
-            Text(label)
-                .font(.system(size: 11))
-                .foregroundStyle(.white.opacity(0.6))
-
-            Spacer()
 
             Text(value)
-                .font(.system(size: 12, weight: .bold, design: .monospaced))
-                .foregroundStyle(color)
+                .font(.system(size: 13, weight: .bold, design: .monospaced))
+                .foregroundStyle(.white)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+
+            Text(label)
+                .font(.system(size: 9, weight: .medium))
+                .foregroundStyle(.white.opacity(0.4))
+                .lineLimit(1)
         }
-        .padding(.vertical, 4)
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 10)
+        .background(Color.white.opacity(0.04))
     }
 
     private func formatCurrencyLocal(_ amount: Int) -> String {
