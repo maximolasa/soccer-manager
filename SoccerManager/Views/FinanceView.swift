@@ -22,6 +22,14 @@ struct FinanceView: View {
         return max(0, min(1.0, (total - Double(minWageBudget)) / total))
     }
 
+    // Season length for weekly conversion
+    private let weeksPerSeason = 52
+
+    /// Format salary lump sum as weekly amount
+    private func weeklyDisplay(_ lumpSum: Int) -> String {
+        viewModel.formatCurrency(lumpSum / weeksPerSeason)
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             headerBar
@@ -95,8 +103,8 @@ struct FinanceView: View {
             if let club = viewModel.selectedClub {
                 HStack(spacing: 0) {
                     statCard("Transfer Budget", viewModel.formatCurrency(club.budget), .cyan)
-                    statCard("Salary Budget", viewModel.formatCurrency(club.wageBudget), salaryColor(club))
-                    statCard("Weekly Wages", viewModel.formatCurrency(viewModel.totalWeeklyWages), .orange)
+                    statCard("Salary/wk", weeklyDisplay(club.wageBudget), salaryColor(club))
+                    statCard("Wages/wk", viewModel.formatCurrency(viewModel.totalWeeklyWages), .orange)
                 }
             }
         }
@@ -122,6 +130,7 @@ struct FinanceView: View {
                 let clampedSlider = min(sliderValue, maxSliderValue)
                 let newTransfer = Int(totalPool * clampedSlider)
                 let newSalary = max(minWageBudget, Int(totalPool * (1.0 - clampedSlider)))
+                let newSalaryWeekly = newSalary / weeksPerSeason
 
                 // Labels above bar
                 HStack {
@@ -138,11 +147,11 @@ struct FinanceView: View {
                     Spacer()
 
                     VStack(alignment: .trailing, spacing: 2) {
-                        Text("SALARY")
+                        Text("SALARY / WEEK")
                             .font(.system(size: 8, weight: .bold))
                             .foregroundStyle(.orange)
                             .tracking(1)
-                        Text(viewModel.formatCurrency(newSalary))
+                        Text(viewModel.formatCurrency(newSalaryWeekly) + "/wk")
                             .font(.system(size: 18, weight: .black, design: .monospaced))
                             .foregroundStyle(.orange)
                     }
@@ -215,7 +224,7 @@ struct FinanceView: View {
 
                 // Change indicator
                 let transferDiff = newTransfer - club.budget
-                let salaryDiff = newSalary - club.wageBudget
+                let salaryDiff = (newSalary - club.wageBudget) / weeksPerSeason
                 if transferDiff != 0 || salaryDiff != 0 {
                     HStack {
                         Label(
@@ -228,7 +237,7 @@ struct FinanceView: View {
                         Spacer()
 
                         Label(
-                            "\(salaryDiff >= 0 ? "+" : "")\(viewModel.formatCurrency(salaryDiff))",
+                            "\(salaryDiff >= 0 ? "+" : "")\(viewModel.formatCurrency(salaryDiff))/wk",
                             systemImage: salaryDiff >= 0 ? "arrow.up.right" : "arrow.down.right"
                         )
                         .font(.system(size: 9, weight: .semibold))
@@ -259,7 +268,7 @@ struct FinanceView: View {
 
             if let club = viewModel.selectedClub {
                 HStack(spacing: 0) {
-                    statCard("Available/wk", viewModel.formatCurrency(viewModel.remainingSalaryBudget), viewModel.remainingSalaryBudget > 0 ? .green : .red)
+                    statCard("Available/wk", viewModel.formatCurrency(viewModel.remainingSalaryBudget / weeksPerSeason), viewModel.remainingSalaryBudget > 0 ? .green : .red)
                     statCard("Weeks Covered", weeksRemaining(club), weeksRemainingColor(club))
                     statCard("Squad Size", "\(viewModel.myPlayers.count)", .white)
                 }

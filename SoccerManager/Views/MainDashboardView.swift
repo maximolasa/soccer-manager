@@ -264,7 +264,7 @@ struct MainDashboardView: View {
                 VStack(spacing: 4) {
                     if let club = viewModel.selectedClub {
                         infoRow("Transfer", viewModel.formatCurrency(club.budget))
-                        infoRow("Salary", viewModel.formatCurrency(club.wageBudget))
+                        infoRow("Salary", viewModel.formatCurrency(club.wageBudget / 52) + "/wk")
                         infoRow("Window", viewModel.transferWindow.label)
                     }
                 }
