@@ -7,6 +7,10 @@ struct TeamSelectionView: View {
     @State private var previewClub: Club?
     @State private var searchText: String = ""
 
+    // Empty state animation
+    @State private var pulseGlow = false
+    @State private var floatOffset: CGFloat = 0
+
     // Contract signing animation states
     @State private var showSigningOverlay = false
     @State private var signingPhase: SigningPhase = .fadeIn
@@ -66,96 +70,175 @@ struct TeamSelectionView: View {
 
     // MARK: - League Sidebar
 
-    private var leagueSidebar: some View {
-        ScrollViewReader { proxy in
-            ScrollView {
-                VStack(spacing: 2) {
-                    ForEach(countries, id: \.name) { country in
-                        VStack(spacing: 0) {
-                            Button {
-                                withAnimation(.spring(duration: 0.3)) {
-                                    if selectedCountry == country.name {
-                                        selectedCountry = nil
-                                        selectedLeague = nil
-                                    } else {
-                                        selectedCountry = country.name
-                                        selectedLeague = nil
-                                    }
-                                    previewClub = nil
-                                }
-                                previewClub = nil
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
-                                    withAnimation {
-                                        proxy.scrollTo(country.name, anchor: .top)
-                                    }
-                                }
-                            } label: {
-                                HStack(spacing: 8) {
-                                    Text(country.emoji)
-                                        .font(.title3)
-                                    Text(country.name)
-                                        .font(.caption)
-                                        .fontWeight(.bold)
-                                        .foregroundStyle(.white)
-                                    Spacer()
-                                    Image(systemName: selectedCountry == country.name ? "chevron.down" : "chevron.right")
-                                        .font(.caption2)
-                                        .foregroundStyle(.white.opacity(0.4))
-                                }
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 10)
-                                .background(
-                                    selectedCountry == country.name
-                                    ? Color.green.opacity(0.15)
-                                    : Color.white.opacity(0.05)
-                                )
-                                .clipShape(.rect(cornerRadius: 8))
-                            }
-                            .buttonStyle(.plain)
-                            .id(country.name)
+    private var sidebarHasSelection: Bool {
+        selectedCountry != nil
+    }
 
-                            if selectedCountry == country.name {
-                                VStack(spacing: 2) {
-                                    ForEach(countryLeagues) { league in
-                                        Button {
-                                            withAnimation(.spring(duration: 0.3)) {
-                                                selectedLeague = league
-                                                previewClub = nil
-                                            }
-                                        } label: {
-                                            HStack(spacing: 6) {
-                                                RoundedRectangle(cornerRadius: 2)
-                                                    .fill(selectedLeague?.id == league.id ? Color.green : Color.white.opacity(0.15))
-                                                    .frame(width: 3, height: 20)
-                                                Text(league.name)
-                                                    .font(.caption)
-                                                    .fontWeight(.semibold)
-                                                    .lineLimit(1)
-                                                Spacer()
-                                            }
-                                            .padding(.horizontal, 10)
-                                            .padding(.vertical, 6)
-                                            .background(
-                                                selectedLeague?.id == league.id
-                                                ? Color.green.opacity(0.2)
-                                                : Color.clear
-                                            )
-                                            .clipShape(.rect(cornerRadius: 6))
-                                        }
-                                        .buttonStyle(.plain)
-                                    }
-                                }
-                                .padding(.leading, 16)
-                                .padding(.top, 2)
-                            }
+    private var leagueSidebar: some View {
+        VStack(spacing: 0) {
+            sidebarHeader
+
+            Divider().overlay(Color.white.opacity(0.06))
+
+            ScrollViewReader { proxy in
+                ScrollView {
+                    if !sidebarHasSelection {
+                        Spacer(minLength: 20)
+                    }
+
+                    VStack(spacing: 4) {
+                        ForEach(countries, id: \.name) { country in
+                            sidebarCountryRow(country: country, proxy: proxy)
                         }
                     }
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+
+                    if !sidebarHasSelection {
+                        Spacer(minLength: 20)
+                    }
                 }
-                .padding(8)
             }
         }
-        .frame(width: 200)
-        .background(Color(white: 0.08))
+        .frame(width: 220)
+        .background(Color(white: 0.07))
+        .overlay(
+            Rectangle()
+                .fill(Color.white.opacity(0.04))
+                .frame(width: 1),
+            alignment: .trailing
+        )
+    }
+
+    private var sidebarHeader: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "globe")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(.green)
+            Text("NATIONS")
+                .font(.system(size: 10, weight: .black))
+                .foregroundStyle(.white.opacity(0.5))
+                .tracking(2)
+            Spacer()
+        }
+        .padding(.horizontal, 14)
+        .padding(.top, 14)
+        .padding(.bottom, 10)
+    }
+
+    private func sidebarCountryRow(country: (name: String, emoji: String), proxy: ScrollViewProxy) -> some View {
+        let isSelected = selectedCountry == country.name
+
+        return VStack(spacing: 0) {
+            Button {
+                withAnimation(.spring(duration: 0.3)) {
+                    if selectedCountry == country.name {
+                        selectedCountry = nil
+                        selectedLeague = nil
+                    } else {
+                        selectedCountry = country.name
+                        selectedLeague = nil
+                    }
+                    previewClub = nil
+                }
+                previewClub = nil
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                    withAnimation {
+                        proxy.scrollTo(country.name, anchor: .top)
+                    }
+                }
+            } label: {
+                sidebarCountryLabel(name: country.name, emoji: country.emoji, isSelected: isSelected)
+            }
+            .buttonStyle(.plain)
+            .id(country.name)
+
+            if isSelected {
+                sidebarLeagueList
+            }
+        }
+    }
+
+    private func sidebarCountryLabel(name: String, emoji: String, isSelected: Bool) -> some View {
+        HStack(spacing: 10) {
+            Text(emoji)
+                .font(.system(size: 22))
+                .frame(width: 36, height: 36)
+                .background(
+                    Circle()
+                        .fill(isSelected ? Color.green.opacity(0.15) : Color.white.opacity(0.05))
+                )
+
+            Text(name)
+                .font(.system(size: 13, weight: .bold))
+                .foregroundStyle(isSelected ? .white : .white.opacity(0.75))
+
+            Spacer()
+
+            Image(systemName: isSelected ? "chevron.down" : "chevron.right")
+                .font(.system(size: 10, weight: .bold))
+                .foregroundStyle(isSelected ? Color.green : .white.opacity(0.25))
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 12)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(isSelected ? Color.green.opacity(0.1) : Color.white.opacity(0.03))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(isSelected ? Color.green.opacity(0.25) : Color.clear, lineWidth: 1)
+        )
+    }
+
+    private var sidebarLeagueList: some View {
+        VStack(spacing: 2) {
+            ForEach(countryLeagues) { league in
+                sidebarLeagueRow(league)
+            }
+        }
+        .padding(.leading, 20)
+        .padding(.trailing, 6)
+        .padding(.top, 4)
+        .padding(.bottom, 4)
+        .transition(.opacity.combined(with: .move(edge: .top)))
+    }
+
+    private func sidebarLeagueRow(_ league: League) -> some View {
+        let isLeagueSelected = selectedLeague?.id == league.id
+
+        return Button {
+            withAnimation(.spring(duration: 0.3)) {
+                selectedLeague = league
+                previewClub = nil
+            }
+        } label: {
+            HStack(spacing: 8) {
+                RoundedRectangle(cornerRadius: 2)
+                    .fill(isLeagueSelected ? Color.green : Color.white.opacity(0.12))
+                    .frame(width: 3, height: 22)
+
+                Text(league.name)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(isLeagueSelected ? .white : .white.opacity(0.55))
+                    .lineLimit(1)
+
+                Spacer()
+
+                if isLeagueSelected {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundStyle(.green)
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(isLeagueSelected ? Color.green.opacity(0.12) : Color.clear)
+            )
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: - Club Grid
@@ -199,18 +282,141 @@ struct TeamSelectionView: View {
                     }
                 }
             } else {
-                VStack(spacing: 16) {
-                    Image(systemName: "sportscourt.fill")
-                        .font(.system(size: 48))
-                        .foregroundStyle(.green.opacity(0.3))
-                    Text("Select a league to begin")
-                        .font(.title3)
-                        .foregroundStyle(.white.opacity(0.4))
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                emptyStateView
             }
         }
         .background(Color(white: 0.05))
+    }
+
+    // MARK: - Empty State
+
+    private var emptyStateView: some View {
+        let totalClubs = viewModel.clubs.count
+        let totalLeagues = viewModel.leagues.count
+        let totalCountries = countries.count
+
+        return VStack(spacing: 0) {
+            Spacer()
+
+            // Animated icon cluster
+            ZStack {
+                // Outer glow ring
+                Circle()
+                    .stroke(
+                        LinearGradient(
+                            colors: [Color.green.opacity(0.3), Color.cyan.opacity(0.15), Color.green.opacity(0.1)],
+                            startPoint: .topLeading, endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 1.5
+                    )
+                    .frame(width: 130, height: 130)
+                    .scaleEffect(pulseGlow ? 1.08 : 1.0)
+                    .opacity(pulseGlow ? 0.6 : 0.3)
+
+                // Inner glow
+                Circle()
+                    .fill(
+                        RadialGradient(
+                            colors: [Color.green.opacity(0.15), Color.clear],
+                            center: .center, startRadius: 10, endRadius: 65
+                        )
+                    )
+                    .frame(width: 130, height: 130)
+
+                // Main icon
+                Image(systemName: "sportscourt.fill")
+                    .font(.system(size: 44))
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: [Color.green.opacity(0.7), Color.cyan.opacity(0.5)],
+                            startPoint: .topLeading, endPoint: .bottomTrailing
+                        )
+                    )
+                    .offset(y: floatOffset)
+
+                // Orbiting small icons
+                Image(systemName: "shield.fill")
+                    .font(.system(size: 14))
+                    .foregroundStyle(Color.green.opacity(0.35))
+                    .offset(x: -55, y: -30 + floatOffset * 0.6)
+
+                Image(systemName: "trophy.fill")
+                    .font(.system(size: 12))
+                    .foregroundStyle(Color.yellow.opacity(0.3))
+                    .offset(x: 52, y: -35 - floatOffset * 0.5)
+
+                Image(systemName: "flag.fill")
+                    .font(.system(size: 11))
+                    .foregroundStyle(Color.cyan.opacity(0.3))
+                    .offset(x: 48, y: 38 + floatOffset * 0.7)
+            }
+            .padding(.bottom, 28)
+
+            // Title
+            VStack(spacing: 8) {
+                Text("Choose Your Club")
+                    .font(.system(size: 24, weight: .black, design: .rounded))
+                    .foregroundStyle(.white)
+
+                Text("Select a country and league from the sidebar to begin")
+                    .font(.system(size: 13))
+                    .foregroundStyle(.white.opacity(0.4))
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: 300)
+            }
+            .padding(.bottom, 28)
+
+            // Stats pills
+            HStack(spacing: 12) {
+                emptyStatPill(icon: "globe", label: "\(totalCountries) Countries", color: .cyan)
+                emptyStatPill(icon: "trophy", label: "\(totalLeagues) Leagues", color: .yellow)
+                emptyStatPill(icon: "shield.fill", label: "\(totalClubs) Clubs", color: .green)
+            }
+            .padding(.bottom, 32)
+
+            // Arrow hint
+            HStack(spacing: 6) {
+                Image(systemName: "arrow.left")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(.green.opacity(0.5))
+                    .offset(x: floatOffset * 0.5)
+                Text("Pick a country to get started")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.3))
+            }
+
+            Spacer()
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .onAppear {
+            withAnimation(.easeInOut(duration: 2.0).repeatForever(autoreverses: true)) {
+                pulseGlow = true
+            }
+            withAnimation(.easeInOut(duration: 2.5).repeatForever(autoreverses: true)) {
+                floatOffset = -6
+            }
+        }
+    }
+
+    private func emptyStatPill(icon: String, label: String, color: Color) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: icon)
+                .font(.system(size: 10))
+                .foregroundStyle(color)
+            Text(label)
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(.white.opacity(0.6))
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 7)
+        .background(
+            Capsule()
+                .fill(color.opacity(0.08))
+        )
+        .overlay(
+            Capsule()
+                .stroke(color.opacity(0.12), lineWidth: 1)
+        )
     }
 
     // MARK: - Club Preview Panel
