@@ -103,7 +103,7 @@ struct MainMenuView: View {
     // MARK: - Menu Side
 
     private var menuSide: some View {
-        VStack(spacing: 6) {
+        VStack(spacing: 8) {
             Spacer()
 
             // Main menu buttons
@@ -164,7 +164,7 @@ struct MainMenuView: View {
 
             Spacer()
         }
-        .padding(.horizontal, 24)
+        .padding(.horizontal, 28)
     }
 
     // MARK: - Menu Buttons
@@ -179,19 +179,19 @@ struct MainMenuView: View {
         action: @escaping () -> Void
     ) -> some View {
         Button(action: action) {
-            HStack(spacing: 10) {
+            HStack(spacing: 12) {
                 Image(systemName: icon)
-                    .font(.system(size: 18))
+                    .font(.system(size: 20))
                     .foregroundStyle(isDisabled ? color.opacity(0.3) : color)
-                    .frame(width: 28)
+                    .frame(width: 32)
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title)
-                        .font(.system(size: 13, weight: .bold))
+                        .font(.system(size: 14, weight: .bold))
                         .foregroundStyle(isDisabled ? .white.opacity(0.25) : .white)
 
                     Text(subtitle)
-                        .font(.system(size: 9))
+                        .font(.system(size: 10))
                         .foregroundStyle(isDisabled ? .white.opacity(0.12) : .white.opacity(0.4))
                 }
 
@@ -205,14 +205,14 @@ struct MainMenuView: View {
 
 
             }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 10)
+            .padding(.horizontal, 15)
+            .padding(.vertical, 12)
             .background(
-                RoundedRectangle(cornerRadius: 12)
+                RoundedRectangle(cornerRadius: 13)
                     .fill(isPrimary ? color.opacity(0.1) : Color.white.opacity(0.04))
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 12)
+                RoundedRectangle(cornerRadius: 13)
                     .stroke(
                         isPrimary ? color.opacity(0.3) : Color.white.opacity(0.06),
                         lineWidth: isPrimary ? 1.5 : 1
@@ -246,8 +246,8 @@ struct MainMenuView: View {
                     .font(.system(size: 9, weight: .semibold))
                     .foregroundStyle(.white.opacity(0.15))
             }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 8)
+            .padding(.horizontal, 15)
+            .padding(.vertical, 9)
             .background(Color.white.opacity(0.02))
             .clipShape(.rect(cornerRadius: 10))
         }
