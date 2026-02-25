@@ -2,6 +2,7 @@ import Foundation
 import SwiftUI
 
 nonisolated enum GameScreen: Sendable {
+    case mainMenu
     case teamSelection
     case dashboard
     case squad
@@ -33,7 +34,7 @@ nonisolated enum TransferWindowStatus: Sendable {
 
 @Observable
 class GameViewModel {
-    var currentScreen: GameScreen = .teamSelection
+    var currentScreen: GameScreen = .mainMenu
     var leagues: [League] = []
     var clubs: [Club] = []
     var players: [Player] = []

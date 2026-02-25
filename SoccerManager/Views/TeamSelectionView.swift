@@ -50,20 +50,26 @@ struct TeamSelectionView: View {
 
                 HStack(spacing: 0) {
                     leagueSidebar
-                    clubGrid
-                    if let club = previewClub {
-                        clubPreviewPanel(club)
-                            .transition(.move(edge: .trailing).combined(with: .opacity))
+
+                    ZStack(alignment: .trailing) {
+                        clubGrid
+
+                        if let club = previewClub {
+                            clubPreviewPanel(club)
+                                .transition(.move(edge: .trailing).combined(with: .opacity))
+                                .zIndex(1)
+                        }
                     }
                 }
             }
+            .allowsHitTesting(!showSigningOverlay)
 
             // Contract signing overlay
             if showSigningOverlay, let club = signingClub {
                 contractSigningOverlay(club)
             }
         }
-        .animation(.spring(duration: 0.35), value: previewClub?.id)
+        .animation(.spring(duration: 0.3, bounce: 0.15), value: previewClub?.id)
     }
 
     // MARK: - Header
@@ -108,6 +114,7 @@ struct TeamSelectionView: View {
                                     }
                                     previewClub = nil
                                 }
+                                previewClub = nil
                                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
                                     withAnimation {
                                         proxy.scrollTo(country.name, anchor: .top)
@@ -238,6 +245,26 @@ struct TeamSelectionView: View {
         let leagueName = viewModel.leagues.first { $0.id == club.leagueId }?.name ?? ""
 
         return VStack(spacing: 0) {
+            // Close button
+            HStack {
+                Spacer()
+                Button {
+                    withAnimation(.spring(duration: 0.3, bounce: 0.15)) {
+                        previewClub = nil
+                    }
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(.white.opacity(0.5))
+                        .padding(6)
+                        .background(Color.white.opacity(0.1))
+                        .clipShape(Circle())
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.trailing, 10)
+            .padding(.top, 8)
+
             // Club header
             VStack(spacing: 10) {
                 ZStack {
@@ -265,7 +292,7 @@ struct TeamSelectionView: View {
                     .font(.system(size: 11))
                     .foregroundStyle(.white.opacity(0.5))
             }
-            .padding(.top, 20)
+            .padding(.top, 4)
             .padding(.bottom, 14)
 
             Divider().overlay(Color.white.opacity(0.1))
@@ -308,6 +335,13 @@ struct TeamSelectionView: View {
         }
         .frame(width: 260)
         .background(Color(white: 0.07))
+        .overlay(
+            Rectangle()
+                .fill(Color.white.opacity(0.06))
+                .frame(width: 1),
+            alignment: .leading
+        )
+        .shadow(color: .black.opacity(0.5), radius: 16, x: -6)
     }
 
     private func previewStatRow(_ label: String, _ value: String, _ color: Color, _ icon: String) -> some View {

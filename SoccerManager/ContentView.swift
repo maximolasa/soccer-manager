@@ -6,6 +6,8 @@ struct ContentView: View {
     var body: some View {
         Group {
             switch viewModel.currentScreen {
+            case .mainMenu:
+                MainMenuView(viewModel: viewModel)
             case .teamSelection:
                 TeamSelectionView(viewModel: viewModel)
             case .dashboard:
