@@ -8,31 +8,28 @@ struct MainMenuView: View {
     @State private var ballRotation: Double = 0
 
     var body: some View {
-        ZStack {
-            // Subtle pitch lines in the background
-            pitchBackground
-                .opacity(0.04)
-
-            // Content
-            HStack(spacing: 0) {
-                // Left side — branding
+        HStack(spacing: 0) {
+            // Left side — branding
+            ZStack {
+                pitchBackground
+                    .opacity(0.04)
                 brandingSide
-                    .frame(maxWidth: .infinity)
-
-                // Divider line
-                Rectangle()
-                    .fill(
-                        LinearGradient(
-                            colors: [.clear, Color.green.opacity(0.3), .clear],
-                            startPoint: .top, endPoint: .bottom
-                        )
-                    )
-                    .frame(width: 1)
-
-                // Right side — menu options
-                menuSide
-                    .frame(maxWidth: .infinity)
             }
+            .frame(maxWidth: .infinity)
+
+            // Divider line
+            Rectangle()
+                .fill(
+                    LinearGradient(
+                        colors: [.clear, Color.green.opacity(0.3), .clear],
+                        startPoint: .top, endPoint: .bottom
+                    )
+                )
+                .frame(width: 1)
+
+            // Right side — menu options
+            menuSide
+                .frame(maxWidth: .infinity)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color(red: 0.04, green: 0.06, blue: 0.09).ignoresSafeArea())

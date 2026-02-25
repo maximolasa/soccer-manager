@@ -196,26 +196,31 @@ struct TeamSelectionView: View {
                             .font(.headline)
                             .foregroundStyle(.white)
                         Spacer()
-                        Text("Max Rating: \(league.maxRating)")
-                            .font(.caption)
-                            .foregroundStyle(.white.opacity(0.5))
                     }
                     .padding(.horizontal, 16)
                     .padding(.vertical, 8)
 
-                    ScrollView {
-                        LazyVGrid(columns: [
-                            GridItem(.adaptive(minimum: 140), spacing: 10)
-                        ], spacing: 10) {
-                            ForEach(filteredClubs) { club in
-                                ClubCard(club: club, isSelected: previewClub?.id == club.id) {
-                                    withAnimation(.spring(duration: 0.3)) {
-                                        previewClub = club
+                    if let selected = previewClub {
+                        // Show only the selected club centered
+                        Spacer()
+                        ClubCard(club: selected, isSelected: true) { }
+                            .frame(width: 150)
+                        Spacer()
+                    } else {
+                        ScrollView {
+                            LazyVGrid(columns: [
+                                GridItem(.adaptive(minimum: 140), spacing: 10)
+                            ], spacing: 10) {
+                                ForEach(filteredClubs) { club in
+                                    ClubCard(club: club, isSelected: false) {
+                                        withAnimation(.spring(duration: 0.3)) {
+                                            previewClub = club
+                                        }
                                     }
                                 }
                             }
+                            .padding(12)
                         }
-                        .padding(12)
                     }
                 }
             } else {
@@ -292,21 +297,20 @@ struct TeamSelectionView: View {
             Divider().overlay(Color.white.opacity(0.1))
 
             // Stats
-            ScrollView {
-                VStack(spacing: 12) {
-                    previewStatRow("Rating", "\(club.rating)", .yellow, "star.fill")
-                    previewStatRow("Transfer Budget", formatCurrencyLocal(club.budget), .cyan, "banknote")
-                    previewStatRow("Salary Budget", formatCurrencyLocal(club.wageBudget / 52) + "/wk", .orange, "creditcard")
-                    previewStatRow("Stadium", club.stadiumName, .green, "building.2")
-                    previewStatRow("Capacity", "\(club.stadiumCapacity / 1000)K", .green, "person.3.fill")
-                    previewStatRow("Formation", club.formation, .purple, "rectangle.split.3x3")
-                    previewStatRow("League Titles", "\(club.leagueTitles)", .yellow, "trophy.fill")
-                    previewStatRow("Cup Wins", "\(club.cupWins)", .yellow, "trophy")
-                }
-                .padding(16)
+            VStack(spacing: 8) {
+                previewStatRow("Rating", "\(club.rating)", .yellow, "star.fill")
+                previewStatRow("Transfer Budget", formatCurrencyLocal(club.budget), .cyan, "banknote")
+                previewStatRow("Salary Budget", formatCurrencyLocal(club.wageBudget / 52) + "/wk", .orange, "creditcard")
+                previewStatRow("Stadium", club.stadiumName, .green, "building.2")
+                previewStatRow("Capacity", "\(club.stadiumCapacity / 1000)K", .green, "person.3.fill")
+                previewStatRow("Formation", club.formation, .purple, "rectangle.split.3x3")
+                previewStatRow("League Titles", "\(club.leagueTitles)", .yellow, "trophy.fill")
+                previewStatRow("Cup Wins", "\(club.cupWins)", .yellow, "trophy")
             }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
 
-            Spacer()
+            Spacer(minLength: 4)
 
             // Sign contract button
             Button {
@@ -571,9 +575,6 @@ struct ClubCard: View {
                         .fontWeight(.bold)
                         .foregroundStyle(.yellow)
                 }
-
-                Text(club.countryEmoji)
-                    .font(.caption2)
             }
             .padding(.vertical, 10)
             .padding(.horizontal, 6)
