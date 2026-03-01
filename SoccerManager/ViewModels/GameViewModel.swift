@@ -55,6 +55,8 @@ class GameViewModel {
     var managerName: String = ""
     var mailMessages: [MailMessage] = []
     var incomingOffers: [TransferOffer] = []
+    var seasonObjectives: [SeasonObjective] = []
+    var academyPlayers: [Player] = []
 
     var unreadMailCount: Int {
         mailMessages.filter { !$0.isRead }.count
@@ -182,6 +184,9 @@ class GameViewModel {
                 category: .board
             )
         }
+
+        generateSeasonObjectives()
+        sendObjectivesMail()
     }
 
     func initializeStandings() {
@@ -610,6 +615,20 @@ class GameViewModel {
         currentDate = Calendar.current.date(byAdding: .day, value: 1, to: currentDate)!
         dayCounter += 1
 
+        // Academy construction tick
+        if let club = selectedClub, club.isAcademyUpgrading {
+            let facilityName = club.academyUpgradeInProgress?.rawValue ?? ""
+            club.tickAcademyUpgrade()
+            if !club.isAcademyUpgrading {
+                // Just finished
+                sendMail(
+                    subject: "Upgrade complete: \(facilityName)",
+                    body: "The \(facilityName) facility upgrade has been completed! Your academy is now stronger.",
+                    category: .board
+                )
+            }
+        }
+
         // Simulate AI matches that happened on the new date (or earlier, if missed)
         let cal = Calendar.current
         let allFixtures = seasonFixtures + cupFixtures + friendlyFixtures
@@ -640,10 +659,281 @@ class GameViewModel {
             applyTraining()
         }
 
-        // Youth academy every ~84 days
-        if dayCounter % 84 == 0 {
-            checkYouthAcademy()
+        // Academy: new prospects every ~90 days
+        if dayCounter % 90 == 0 {
+            generateAcademyProspects()
         }
+
+        // Academy: growth every ~60 days
+        if dayCounter % 60 == 0 {
+            growAcademyPlayers()
+        }
+
+        // Season end check — all league fixtures played
+        checkSeasonEnd()
+    }
+
+    // MARK: - Season Objectives
+
+    func generateSeasonObjectives() {
+        guard let club = selectedClub else { return }
+        seasonObjectives = []
+
+        let leagueClubs = clubs.filter { $0.leagueId == club.leagueId }
+        let totalTeams = leagueClubs.count
+        let ratingRank = leagueClubs.sorted { $0.rating > $1.rating }
+        let expectedPos = (ratingRank.firstIndex(where: { $0.id == club.id }) ?? totalTeams) + 1
+
+        // 1. League position objective
+        let posTarget: Int
+        if expectedPos <= 2 {
+            posTarget = 3  // Title contenders → top 3
+        } else if expectedPos <= totalTeams / 2 {
+            posTarget = min(totalTeams, expectedPos + 2)  // upper half + buffer
+        } else {
+            posTarget = min(totalTeams, expectedPos + 3)  // avoid relegation
+        }
+        seasonObjectives.append(SeasonObjective(
+            description: "Finish in the top \(posTarget) in the league",
+            type: .leaguePosition,
+            target: posTarget
+        ))
+
+        // 2. Minimum points
+        let matchesPerSeason = (totalTeams - 1) * 2
+        let pointsTarget: Int
+        if expectedPos <= 2 {
+            pointsTarget = Int(Double(matchesPerSeason * 3) * 0.65) // ~65% of max
+        } else if expectedPos <= totalTeams / 2 {
+            pointsTarget = Int(Double(matchesPerSeason * 3) * 0.45)
+        } else {
+            pointsTarget = Int(Double(matchesPerSeason * 3) * 0.30)
+        }
+        seasonObjectives.append(SeasonObjective(
+            description: "Accumulate at least \(pointsTarget) points",
+            type: .minPoints,
+            target: pointsTarget
+        ))
+
+        // 3. Goals or cup run
+        if expectedPos <= totalTeams / 3 {
+            // Top-rated teams → cup run objective
+            seasonObjectives.append(SeasonObjective(
+                description: "Reach the cup semi-finals",
+                type: .cupRun,
+                target: 3 // SF
+            ))
+        } else {
+            let goalsTarget = max(15, Int(Double(matchesPerSeason) * (expectedPos <= totalTeams / 2 ? 1.2 : 0.8)))
+            seasonObjectives.append(SeasonObjective(
+                description: "Score at least \(goalsTarget) league goals",
+                type: .goalsScored,
+                target: goalsTarget
+            ))
+        }
+    }
+
+    func sendObjectivesMail() {
+        let clubName = selectedClub?.name ?? "the club"
+        var body = "The board of \(clubName) has set the following objectives for the \(seasonYear)/\(seasonYear + 1) season:\n\n"
+        for (i, obj) in seasonObjectives.enumerated() {
+            body += "\(i + 1). \(obj.description)\n"
+        }
+        body += "\nYour performance will be evaluated at the end of the season. Good luck!"
+        sendMail(
+            subject: "Season Objectives \(seasonYear)/\(seasonYear + 1)",
+            body: body,
+            category: .board
+        )
+    }
+
+    // MARK: - Season End
+
+    private var isSeasonFinished: Bool {
+        guard !seasonFixtures.isEmpty else { return false }
+        return seasonFixtures.allSatisfy { $0.isPlayed }
+    }
+
+    func checkSeasonEnd() {
+        guard isSeasonFinished else { return }
+        evaluateSeason()
+        startNewSeason()
+    }
+
+    func evaluateSeason() {
+        guard let club = selectedClub else { return }
+        let sortedStandings = currentLeagueStandings
+        let myPosition = (sortedStandings.firstIndex(where: { $0.clubId == club.id }) ?? sortedStandings.count) + 1
+        let myEntry = sortedStandings.first(where: { $0.clubId == club.id })
+        let myPoints = myEntry?.points ?? 0
+
+        // Count league goals
+        var myLeagueGoals = 0
+        for match in seasonFixtures {
+            guard match.isPlayed, match.leagueId == club.leagueId else { continue }
+            if match.homeClubId == club.id { myLeagueGoals += match.homeScore }
+            else if match.awayClubId == club.id { myLeagueGoals += match.awayScore }
+        }
+
+        // Cup progress (count how many cup rounds won)
+        var cupWins = 0
+        for m in cupFixtures {
+            guard m.isPlayed else { continue }
+            if (m.homeClubId == club.id && m.homeScore > m.awayScore) ||
+               (m.awayClubId == club.id && m.awayScore > m.homeScore) {
+                cupWins += 1
+            }
+        }
+
+        // Evaluate each objective
+        for i in seasonObjectives.indices {
+            switch seasonObjectives[i].type {
+            case .leaguePosition:
+                seasonObjectives[i].achieved = myPosition <= seasonObjectives[i].target
+            case .minPoints:
+                seasonObjectives[i].achieved = myPoints >= seasonObjectives[i].target
+            case .cupRun:
+                seasonObjectives[i].achieved = cupWins >= seasonObjectives[i].target
+            case .goalsScored:
+                seasonObjectives[i].achieved = myLeagueGoals >= seasonObjectives[i].target
+            }
+        }
+
+        let achieved = seasonObjectives.filter { $0.achieved }.count
+        let total = seasonObjectives.count
+
+        // League title check
+        if myPosition == 1 {
+            managerLeagueTitles += 1
+            newsMessages.insert("🏆 CHAMPIONS! You won the league!", at: 0)
+        }
+
+        // Build evaluation mail
+        var body = "Season \(seasonYear)/\(seasonYear + 1) Review\n\n"
+        body += "Final position: \(myPosition)\(myPosition == 1 ? " 🏆" : "")\n"
+        body += "Points: \(myPoints)\n"
+        body += "League goals: \(myLeagueGoals)\n\n"
+        body += "Objectives (\(achieved)/\(total) met):\n\n"
+
+        for obj in seasonObjectives {
+            body += "\(obj.achieved ? "✅" : "❌") \(obj.description)\n"
+        }
+
+        if achieved == total {
+            body += "\nThe board is delighted with your performance. Excellent work!"
+        } else if achieved >= total / 2 {
+            body += "\nThe board is satisfied with the season overall."
+        } else {
+            body += "\nThe board is disappointed. Significant improvement is expected next season."
+        }
+
+        sendMail(
+            subject: "Season Review \(seasonYear)/\(seasonYear + 1)",
+            body: body,
+            category: .board
+        )
+    }
+
+    // MARK: - New Season
+
+    func startNewSeason() {
+        seasonYear += 1
+
+        // Age progression + contract decay + retirements
+        for player in players {
+            player.age += 1
+            player.applyAgeProgression()
+            player.contractYearsLeft -= 1
+
+            // Contract expired → free agent
+            if player.contractYearsLeft <= 0 && player.clubId != nil {
+                let wasMyPlayer = player.clubId == selectedClubId
+                player.clubId = nil
+                player.contractYearsLeft = 0
+                if wasMyPlayer {
+                    sendMail(
+                        subject: "Contract expired: \(player.fullName)",
+                        body: "\(player.fullName)'s contract has expired. They have left the club as a free agent.",
+                        category: .transfer
+                    )
+                }
+            }
+
+            // Retirement (age 36+ with declining stats)
+            if player.age >= 36 && Double.random(in: 0...1) < Double(player.age - 35) * 0.25 {
+                let wasMyPlayer = player.clubId == selectedClubId
+                player.clubId = nil
+                player.contractYearsLeft = 0
+                if wasMyPlayer {
+                    sendMail(
+                        subject: "Retirement: \(player.fullName)",
+                        body: "\(player.fullName) (age \(player.age)) has announced their retirement from professional football.",
+                        category: .general
+                    )
+                }
+            }
+
+            // Reset season stats
+            player.matchesPlayed = 0
+            player.goals = 0
+            player.assists = 0
+            player.yellowCards = 0
+            player.redCards = 0
+            player.isInjured = false
+            player.injuryWeeksLeft = 0
+        }
+
+        // Budget top-up for all clubs
+        for club in clubs {
+            let bonus = Int(Double(club.budget) * 0.15) + Int.random(in: 500_000...2_000_000)
+            club.budget += bonus
+        }
+
+        // Academy: age up and auto-promote 21+ year olds
+        for player in academyPlayers {
+            player.age += 1
+        }
+        let graduates = academyPlayers.filter { $0.age >= 21 }
+        for grad in graduates {
+            promoteAcademyPlayer(grad)
+            sendMail(
+                subject: "Auto-promoted: \(grad.fullName)",
+                body: "\(grad.fullName) has turned \(grad.age) and graduated from the academy to the first team.",
+                category: .youth
+            )
+        }
+
+        // Clear old fixtures & offers
+        seasonFixtures = []
+        cupFixtures = []
+        friendlyFixtures = []
+        incomingOffers = []
+
+        // Advance date to next July 1
+        var comps = DateComponents()
+        comps.year = seasonYear
+        comps.month = 7
+        comps.day = 1
+        currentDate = Calendar.current.date(from: comps)!
+        dayCounter = 0
+        currentWeek = 0
+
+        // Generate new season
+        generateFriendlies()
+        generateSeasonSchedule()
+        initializeStandings()
+        generateFreeAgents()
+
+        // New objectives
+        generateSeasonObjectives()
+        sendObjectivesMail()
+
+        newsMessages.insert("New season \(seasonYear)/\(seasonYear + 1) has begun!", at: 0)
+        sendMail(
+            subject: "New Season: \(seasonYear)/\(seasonYear + 1)",
+            body: "A new season has started. Your transfer budget is \(formatCurrency(selectedClub?.budget ?? 0)). The transfer window is open — make your moves!",
+            category: .board
+        )
     }
 
     func advanceToMatchDay() {
@@ -710,7 +1000,7 @@ class GameViewModel {
         let mySquad = players.filter { $0.clubId == clubId }
         for player in mySquad {
             let chance = Double.random(in: 0...1)
-            if chance < 0.3 * club.trainingBoost && player.age < 30 {
+            if chance < 0.3 * club.academyGrowthMultiplier && player.age < 30 {
                 let boost = Int.random(in: 1...2)
                 // Boost random individual stats — position-aware
                 let allStats: [(WritableKeyPath<PlayerStats, Int>)]
@@ -732,22 +1022,93 @@ class GameViewModel {
         }
     }
 
-    func checkYouthAcademy() {
-        guard let clubId = selectedClubId, let club = selectedClub else { return }
-        let shouldGenerate = Double.random(in: 0...1) < Double(club.playersPerYear) * 0.25
-        if shouldGenerate {
+    // MARK: - Youth Academy
+
+    func generateAcademyProspects() {
+        guard let club = selectedClub else { return }
+
+        let maxProspects = club.academyProspectsPerCycle
+        for _ in 0..<maxProspects {
+            // 60% chance per slot
+            guard Double.random(in: 0...1) < 0.6 else { continue }
+
             let position = PlayerPosition.allCases.randomElement()!
-            let quality = club.academyBaseQuality + Int.random(in: -5...10)
-            let player = GameDataGenerator.generatePlayer(clubId: clubId, position: position, quality: quality)
-            player.age = Int.random(in: 16...19)
-            player.contractYearsLeft = 3
-            players.append(player)
+            let baseOVR = club.academyBaseOVR + Int.random(in: -5...8)
+            let quality = max(20, min(60, baseOVR))
+
+            let player = GameDataGenerator.generatePlayer(clubId: nil, position: position, quality: quality)
+            player.age = Int.random(in: 14...16)
+            player.contractYearsLeft = 0  // academy players don't have contracts
+            player.potentialPeak = min(95, quality + 15 + Int.random(in: 0...25))
+            academyPlayers.append(player)
+
             sendMail(
-                subject: "New youth talent: \(player.fullName)",
-                body: "The youth academy has produced \(player.fullName), a \(player.position.fullName) rated \(player.overall) OVR. He has been added to your squad.",
+                subject: "New prospect: \(player.fullName)",
+                body: "Our scouts have discovered \(player.fullName), a \(player.age)-year-old \(player.position.fullName) (OVR \(player.overall), POT \(player.potentialPeak)). He has joined the youth academy.",
                 category: .youth
             )
         }
+    }
+
+    func growAcademyPlayers() {
+        guard let club = selectedClub else { return }
+        let multiplier = club.academyGrowthMultiplier
+
+        for player in academyPlayers {
+            // Growth rate by age band
+            let baseGrowth: Int
+            if player.age <= 16 {
+                baseGrowth = Int.random(in: 2...5)  // fast growth
+            } else if player.age <= 18 {
+                baseGrowth = Int.random(in: 1...3)  // moderate
+            } else {
+                baseGrowth = Int.random(in: 0...2)  // slow
+            }
+
+            let growth = max(0, Int(Double(baseGrowth) * multiplier))
+            guard growth > 0, player.overall < player.potentialPeak else { continue }
+
+            if player.position == .goalkeeper {
+                player.stats.reflexes = min(99, player.stats.reflexes + Int.random(in: 0...growth))
+                player.stats.diving = min(99, player.stats.diving + Int.random(in: 0...growth))
+                player.stats.handling = min(99, player.stats.handling + Int.random(in: 0...growth))
+                player.stats.gkPositioning = min(99, player.stats.gkPositioning + Int.random(in: 0...growth))
+                player.stats.kicking = min(99, player.stats.kicking + Int.random(in: 0...growth))
+            } else {
+                player.stats.finishing = min(99, player.stats.finishing + Int.random(in: 0...growth))
+                player.stats.dribbling = min(99, player.stats.dribbling + Int.random(in: 0...growth))
+                player.stats.passing = min(99, player.stats.passing + Int.random(in: 0...growth))
+                player.stats.tackling = min(99, player.stats.tackling + Int.random(in: 0...growth))
+                player.stats.marking = min(99, player.stats.marking + Int.random(in: 0...growth))
+            }
+            player.stats.pace = min(99, player.stats.pace + Int.random(in: 0...growth))
+            player.stats.stamina = min(99, player.stats.stamina + Int.random(in: 0...growth))
+            player.stats.strength = min(99, player.stats.strength + Int.random(in: 0...growth))
+            player.marketValue = player.calculateMarketValue()
+        }
+    }
+
+    func promoteAcademyPlayer(_ player: Player) {
+        guard let clubId = selectedClubId else { return }
+        academyPlayers.removeAll { $0.id == player.id }
+        player.clubId = clubId
+        player.contractYearsLeft = 3
+        player.wage = max(1_000, player.marketValue / 200)
+        players.append(player)
+        sendMail(
+            subject: "Promoted: \(player.fullName)",
+            body: "\(player.fullName) (\(player.age), \(player.position.fullName), \(player.overall) OVR) has been promoted from the academy to the first team on a 3-year contract.",
+            category: .youth
+        )
+    }
+
+    func releaseAcademyPlayer(_ player: Player) {
+        academyPlayers.removeAll { $0.id == player.id }
+        sendMail(
+            subject: "Academy release: \(player.fullName)",
+            body: "\(player.fullName) has been released from the youth academy.",
+            category: .youth
+        )
     }
 
     func handleInjuries() {

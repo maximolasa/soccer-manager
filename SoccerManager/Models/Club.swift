@@ -1,10 +1,40 @@
 import Foundation
 import SwiftUI
 
-nonisolated enum AcademyUpgrade: String, CaseIterable, Sendable {
-    case recruiting
-    case quality
-    case training
+nonisolated enum AcademyFacility: String, CaseIterable, Sendable {
+    case scouting = "Scouting"
+    case coaching = "Coaching"
+    case facilities = "Facilities"
+
+    var icon: String {
+        switch self {
+        case .scouting:   return "binoculars.fill"
+        case .coaching:   return "star.fill"
+        case .facilities: return "building.2.fill"
+        }
+    }
+
+    var color: Color {
+        switch self {
+        case .scouting:   return .green
+        case .coaching:   return .yellow
+        case .facilities: return .cyan
+        }
+    }
+
+    var description: String {
+        switch self {
+        case .scouting:   return "More prospects discovered each year"
+        case .coaching:   return "Higher base quality of new prospects"
+        case .facilities: return "Faster stat growth while in academy"
+        }
+    }
+
+    /// Fixed upgrade costs: same for all clubs — significant investment
+    static let upgradeCosts: [Int] = [20_000_000, 35_000_000, 50_000_000, 75_000_000]  // Lv1→2, 2→3, 3→4, 4→5
+
+    /// Construction time in days for each upgrade level
+    static let upgradeDays: [Int] = [14, 30, 45, 60]  // Lv1→2, 2→3, 3→4, 4→5
 }
 
 @Observable
@@ -19,9 +49,11 @@ class Club: Identifiable {
     var stadiumName: String
     var stadiumCapacity: Int
     var formation: String
-    var academyRecruitingLevel: Int
-    var academyQualityLevel: Int
-    var academyTrainingLevel: Int
+    var academyScoutingLevel: Int
+    var academyCoachingLevel: Int
+    var academyFacilitiesLevel: Int
+    var academyUpgradeInProgress: AcademyFacility?
+    var academyUpgradeDaysLeft: Int = 0
     var leagueTitles: Int
     var cupWins: Int
     var primaryColor: String
@@ -32,9 +64,19 @@ class Club: Identifiable {
     var pressing: String
     var playWidth: String
 
-    var playersPerYear: Int { 1 + academyRecruitingLevel }
-    var academyBaseQuality: Int { 30 + (academyQualityLevel * 8) }
-    var trainingBoost: Double { 1.0 + Double(academyTrainingLevel) * 0.15 }
+    /// True when a construction is in progress
+    var isAcademyUpgrading: Bool { academyUpgradeInProgress != nil && academyUpgradeDaysLeft > 0 }
+
+    // MARK: - Academy Computed Props
+
+    /// How many prospects can be generated per spawn cycle (1-3)
+    var academyProspectsPerCycle: Int { min(3, academyScoutingLevel) }
+
+    /// Base OVR for spawned academy players
+    var academyBaseOVR: Int { 25 + (academyCoachingLevel * 7) }
+
+    /// Growth multiplier applied to academy training
+    var academyGrowthMultiplier: Double { 0.6 + Double(academyFacilitiesLevel) * 0.2 }
 
     var primarySwiftUIColor: Color {
         Club.colorFromString(primaryColor)
@@ -90,9 +132,9 @@ class Club: Identifiable {
         self.stadiumName = stadiumName
         self.stadiumCapacity = stadiumCapacity
         self.formation = formation
-        self.academyRecruitingLevel = 1
-        self.academyQualityLevel = 1
-        self.academyTrainingLevel = 1
+        self.academyScoutingLevel = 1
+        self.academyCoachingLevel = 1
+        self.academyFacilitiesLevel = 1
         self.leagueTitles = 0
         self.cupWins = 0
         self.primaryColor = primaryColor
@@ -104,27 +146,82 @@ class Club: Identifiable {
         self.playWidth = "Normal"
     }
 
-    func upgradeAcademy(_ type: AcademyUpgrade) -> Bool {
-        let cost: Int
+    /// Set academy levels based on club rating
+    func initAcademyLevels() {
+        if rating >= 85 {
+            academyScoutingLevel = 3
+            academyCoachingLevel = 3
+            academyFacilitiesLevel = 3
+        } else if rating >= 70 {
+            academyScoutingLevel = 2
+            academyCoachingLevel = 2
+            academyFacilitiesLevel = 2
+        } else {
+            academyScoutingLevel = 1
+            academyCoachingLevel = 1
+            academyFacilitiesLevel = 1
+        }
+    }
+
+    /// Start an academy upgrade — pays cost and begins construction timer
+    func upgradeAcademy(_ facility: AcademyFacility) -> Bool {
+        guard !isAcademyUpgrading else { return false }  // one at a time
+
         let currentLevel: Int
-        switch type {
-        case .recruiting:
-            currentLevel = academyRecruitingLevel
-            cost = currentLevel * 2_000_000
-        case .quality:
-            currentLevel = academyQualityLevel
-            cost = currentLevel * 3_000_000
-        case .training:
-            currentLevel = academyTrainingLevel
-            cost = currentLevel * 2_500_000
+        switch facility {
+        case .scouting:   currentLevel = academyScoutingLevel
+        case .coaching:   currentLevel = academyCoachingLevel
+        case .facilities: currentLevel = academyFacilitiesLevel
         }
-        guard currentLevel < 10, budget >= cost else { return false }
+
+        guard currentLevel < 5 else { return false }
+        let cost = AcademyFacility.upgradeCosts[currentLevel - 1]
+        guard budget >= cost else { return false }
+
         budget -= cost
-        switch type {
-        case .recruiting: academyRecruitingLevel += 1
-        case .quality: academyQualityLevel += 1
-        case .training: academyTrainingLevel += 1
-        }
+        academyUpgradeInProgress = facility
+        academyUpgradeDaysLeft = AcademyFacility.upgradeDays[currentLevel - 1]
         return true
+    }
+
+    /// Called daily from advanceDay — ticks down the construction timer
+    func tickAcademyUpgrade() {
+        guard isAcademyUpgrading else { return }
+        academyUpgradeDaysLeft -= 1
+        if academyUpgradeDaysLeft <= 0 {
+            completeAcademyUpgrade()
+        }
+    }
+
+    /// Apply the level bump when construction finishes
+    func completeAcademyUpgrade() {
+        guard let facility = academyUpgradeInProgress else { return }
+        switch facility {
+        case .scouting:   academyScoutingLevel += 1
+        case .coaching:   academyCoachingLevel += 1
+        case .facilities: academyFacilitiesLevel += 1
+        }
+        academyUpgradeInProgress = nil
+        academyUpgradeDaysLeft = 0
+    }
+
+    func academyUpgradeCost(_ facility: AcademyFacility) -> Int? {
+        let currentLevel = academyLevel(for: facility)
+        guard currentLevel < 5 else { return nil }
+        return AcademyFacility.upgradeCosts[currentLevel - 1]
+    }
+
+    func academyUpgradeDuration(_ facility: AcademyFacility) -> Int? {
+        let currentLevel = academyLevel(for: facility)
+        guard currentLevel < 5 else { return nil }
+        return AcademyFacility.upgradeDays[currentLevel - 1]
+    }
+
+    func academyLevel(for facility: AcademyFacility) -> Int {
+        switch facility {
+        case .scouting:   return academyScoutingLevel
+        case .coaching:   return academyCoachingLevel
+        case .facilities: return academyFacilitiesLevel
+        }
     }
 }

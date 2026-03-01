@@ -716,6 +716,7 @@ struct GameDataGenerator {
                     secondaryColor: clubData.secondary,
                     countryEmoji: data.emoji
                 )
+                club.initAcademyLevels()
                 clubs.append(club)
             }
         }
